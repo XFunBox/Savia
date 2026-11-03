@@ -43,11 +43,14 @@ en el repositorio ni introducir contraseñas en el historial:
 | `SAVIA_KEY_PASSWORD` | Contraseña de esa clave |
 
 ```bash
+export ANDROID_HOME=/ruta/al/Android/Sdk
 bash gradlew --no-daemon testDebugUnitTest assembleRelease lintRelease
 bash scripts/verificar-apk.sh app/build/outputs/apk/release/app-release.apk 2.0.1
 ```
 
 El ejemplo supone haber incrementado la versión a 2.0.1 y el código a 5.
+El verificador necesita `ANDROID_HOME` (o `ANDROID_SDK_ROOT`), incluso si
+Gradle localiza el SDK mediante `local.properties`.
 Sin variables de firma se puede compilar una APK sin firmar para inspección;
 no se sustituye la clave por la clave debug del equipo. Si se define solo una
 parte de las variables, Gradle falla con un mensaje de configuración.

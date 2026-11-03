@@ -5,6 +5,7 @@ apk="${1:?Falta la ruta de la APK}"
 version="${2:?Falta la versión esperada}"
 [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo 'Versión inválida: usa X.Y.Z.'; exit 1; }
 sdk="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-}}"
+: "${sdk:?Define ANDROID_HOME con la ruta del Android SDK para verificar la APK}"
 tools="$sdk/build-tools/36.0.0"
 
 # Huella pública extraída de Savia 2.0.0. No cambiar para aceptar una clave nueva.

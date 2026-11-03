@@ -40,7 +40,6 @@ jobs:
     permissions:
       contents: write
     env:
-      SAVIA_KEYSTORE_FILE: ${{ runner.temp }}/savia-release.keystore
       SAVIA_STORE_PASSWORD: ${{ secrets.SAVIA_STORE_PASSWORD }}
       SAVIA_KEY_ALIAS: ${{ secrets.SAVIA_KEY_ALIAS }}
       SAVIA_KEY_PASSWORD: ${{ secrets.SAVIA_KEY_PASSWORD }}
@@ -68,7 +67,8 @@ jobs:
             fi
           done
           umask 077
-          printf '%s' "$KEYSTORE_BASE64" | base64 --decode > "$SAVIA_KEYSTORE_FILE"
+          printf '%s' "$KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/savia-release.keystore"
+          echo "SAVIA_KEYSTORE_FILE=$RUNNER_TEMP/savia-release.keystore" >> "$GITHUB_ENV"
       - name: Compilar APK firmada y comprobar lint de publicación
         run: bash gradlew --no-daemon assembleRelease lintRelease
       - name: Verificar firma y versión
@@ -97,4 +97,4 @@ jobs:
           gh release view "$GITHUB_REF_NAME" --json url --jq .url >> "$GITHUB_STEP_SUMMARY"
       - name: Eliminar clave temporal
         if: always()
-        run: rm -f "$SAVIA_KEYSTORE_FILE"
+        run: rm -f "$RUNNER_TEMP/savia-release.keystore"
