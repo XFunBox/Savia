@@ -22,8 +22,9 @@ jobs:
           distribution: temurin
           java-version: '17'
       - uses: android-actions/setup-android@9fc6c4e9069bf8d3d10b2204b1fb8f6ef7065407 # v3
-      - name: Instalar SDK
-        run: sdkmanager 'platforms;android-36' 'build-tools;36.0.0'
+        with:
+          packages: 'platform-tools platforms;android-36 build-tools;36.0.0'
+          log-accepted-android-sdk-licenses: false
       - name: Pruebas, APK de desarrollo y lint
         run: bash gradlew --no-daemon testDebugUnitTest assembleDebug lintDebug
       - name: Comprobar controles de publicación
@@ -52,8 +53,9 @@ jobs:
           distribution: temurin
           java-version: '17'
       - uses: android-actions/setup-android@9fc6c4e9069bf8d3d10b2204b1fb8f6ef7065407 # v3
-      - name: Instalar SDK
-        run: sdkmanager 'platforms;android-36' 'build-tools;36.0.0'
+        with:
+          packages: 'platform-tools platforms;android-36 build-tools;36.0.0'
+          log-accepted-android-sdk-licenses: false
       - name: Recuperar clave de firma
         env:
           KEYSTORE_BASE64: ${{ secrets.SAVIA_KEYSTORE_BASE64 }}
