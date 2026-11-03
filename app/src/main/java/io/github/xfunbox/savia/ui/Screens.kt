@@ -1,22 +1,43 @@
 package io.github.xfunbox.savia.ui
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.toggleable
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ReceiptLong
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import io.github.xfunbox.savia.*
 import java.time.LocalDate
+import java.time.format.DateTimeFormatter
+import java.time.temporal.ChronoUnit
+import java.util.Locale
 import java.util.UUID
+
+private val shortDate = DateTimeFormatter.ofPattern("dd MMM", Locale.forLanguageTag("es-ES"))
+private fun LocalDate.readable() = format(shortDate)
 
 @Composable
 internal fun Screens(data: AppData, page: Int, today: LocalDate, busy: Boolean,
-    save: (AppData) -> Unit, onSettings: () -> Unit, onExport: () -> Unit, onImport: () -> Unit) {
+    save: (AppData) -> Unit, onSettings: () -> Unit, onExport: () -> Unit, onImport: () -> Unit,
+    addRequest: Int = 0, onPlan: () -> Unit = {}) {
     val cycle = data.cycles.maxByOrNull { it.start }
     var movementPage by remember(cycle?.id) { mutableIntStateOf(0) }
     var dialog by remember { mutableStateOf<String?>(null) }
+    var pendingDialogSave by remember { mutableStateOf<AppData?>(null) }
     var edit by remember { mutableStateOf<Movement?>(null) }
     var delete by remember { mutableStateOf<Movement?>(null) }
     var failure by remember { mutableStateOf<String?>(null) }
@@ -24,162 +45,298 @@ internal fun Screens(data: AppData, page: Int, today: LocalDate, busy: Boolean,
         try { validateData(next); save(next); failure = null }
         catch (e: Exception) { failure = e.message ?: "Revisa los datos." }
     }
-    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+    LaunchedEffect(addRequest) {
+        if (addRequest > 0 && cycle != null) { edit = null; dialog = "movement" }
+    }
+    LaunchedEffect(data, pendingDialogSave) {
+        if (pendingDialogSave != null && data == pendingDialogSave) {
+            dialog = null
+            pendingDialogSave = null
+        }
+    }
+    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(20.dp)) {
         failure?.let { Text(it, color = MaterialTheme.colorScheme.error) }
         when (page) {
             0 -> {
-                Title("Tu ciclo")
                 if (cycle == null) {
-                    Text("Empieza configurando tu ingreso y tus gastos fijos. Después abre tu primer ciclo de cobro.")
-                    OutlinedButton(onClick = onSettings) { Text("Configurar ajustes") }
-                } else {
-                    CycleLabel(cycle)
-                    val summary = summarize(cycle, data.movements)
-                    Amount("Disponible tras reservar fijos y meta", summary.available, cycle.currency)
-                    Amount("Meta del ciclo", summary.target, cycle.currency)
-                    Amount("Previsión al final del ciclo", summary.forecast, cycle.currency)
-                    Text("La previsión estima ingresos menos fijos y el mayor entre tu presupuesto variable y lo gastado. No confirma un ahorro real.", style = MaterialTheme.typography.bodySmall)
-                    Title("Gastos fijos")
-                    if (cycle.bills.isEmpty()) Text("Este ciclo no tiene gastos fijos.")
-                    val canPayToday = !today.isBefore(cycle.start) && today.isBefore(cycle.end)
-                    if (!canPayToday && cycle.bills.isNotEmpty()) Text("Solo puedes marcar pagos durante las fechas del ciclo.")
-                    cycle.bills.forEach { bill ->
-                        val paid = data.movements.firstOrNull { it.cycleId == cycle.id && it.billId == bill.id }
-                        Card(Modifier.fillMaxWidth()) { Column(Modifier.padding(12.dp)) {
-                            Text(bill.name, style = MaterialTheme.typography.titleMedium)
-                            Text(formatMoney(bill.amount, cycle.currency))
-                            if (paid != null) {
-                                Text("Pagado · ${paid.date}")
-                                TextButton(enabled = !busy, onClick = { delete = paid }) { Text("Desmarcar pago") }
-                            } else Button(enabled = !busy && canPayToday, onClick = {
-                                change(data.copy(movements = data.movements + Movement(UUID.randomUUID().toString(), cycle.id, today, bill.amount, category = "Fijos", billId = bill.id)))
-                            }) { Text("Marcar pagado") }
-                        } }
+                    Surface(shape = RoundedCornerShape(28.dp), color = MaterialTheme.colorScheme.primaryContainer) {
+                        Column(Modifier.fillMaxWidth().padding(24.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                            Icon(Icons.Default.Savings, null, Modifier.size(40.dp))
+                            Text("Tu dinero, con un plan", style = MaterialTheme.typography.headlineMedium)
+                            Text(if (data.settings.salary == 0L) "Empieza por tu ingreso y tus gastos habituales. Después verás cuánto puedes gastar y reservar."
+                                else "Ya tienes tu plan. Confirma el ingreso recibido para empezar tu primer periodo.")
+                            Button(enabled = !busy, onClick = { if (data.settings.salary == 0L) onSettings() else dialog = "cycle" }) {
+                                Text(if (data.settings.salary == 0L) "Preparar mi plan" else "Empezar mi periodo")
+                            }
+                        }
                     }
+                } else {
+                    val summary = summarize(cycle, data.movements)
+                    val active = today >= cycle.start && today < cycle.end
+                    val remaining = ChronoUnit.DAYS.between(maxOf(today, cycle.start), cycle.end).coerceAtLeast(0)
+                    CycleLabel(cycle)
+                    Surface(shape = RoundedCornerShape(28.dp), color = MaterialTheme.colorScheme.primaryContainer) {
+                        Column(Modifier.fillMaxWidth().padding(24.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                Icon(Icons.Default.AccountBalanceWallet, null)
+                                Text("Disponible para gastar", style = MaterialTheme.typography.titleMedium)
+                            }
+                            Text(formatMoney(summary.available, cycle.currency), style = MaterialTheme.typography.displaySmall, fontWeight = FontWeight.Bold,
+                                color = if (summary.available < 0) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onPrimaryContainer)
+                            Text("Con tus fijos y tu meta ya reservados", style = MaterialTheme.typography.bodySmall)
+                            HorizontalDivider(color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = .18f))
+                            Text(if (remaining > 0) "${formatMoney(summary.available / remaining, cycle.currency)} al día · estimación para $remaining días" else "Este periodo ha terminado",
+                                style = MaterialTheme.typography.bodyMedium)
+                            Text("Siguiente cobro · ${cycle.end.readable()}", style = MaterialTheme.typography.labelLarge)
+                        }
+                    }
+                    BudgetCard(summary.variableSpent, cycle.variableBudget, cycle.currency)
+                    Card(onClick = onPlan, shape = RoundedCornerShape(24.dp), modifier = Modifier.fillMaxWidth()) {
+                        Row(Modifier.padding(20.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+                            Icon(Icons.Default.Savings, null, tint = MaterialTheme.colorScheme.secondary, modifier = Modifier.size(30.dp))
+                            Column(Modifier.weight(1f)) {
+                                Text("Tu meta", style = MaterialTheme.typography.labelLarge)
+                                Text(formatMoney(cycle.target, cycle.currency), style = MaterialTheme.typography.headlineSmall)
+                                Text("Ver plan y previsión", style = MaterialTheme.typography.bodySmall)
+                            }
+                            Icon(Icons.Default.ChevronRight, "Ver plan")
+                        }
+                    }
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                        Title("Gastos fijos")
+                        Text("${cycle.bills.count { bill -> data.movements.any { it.cycleId == cycle.id && it.billId == bill.id } }} / ${cycle.bills.size} pagados", style = MaterialTheme.typography.labelMedium)
+                    }
+                    if (cycle.bills.isEmpty()) Text("No tienes gastos fijos en este periodo.", style = MaterialTheme.typography.bodyMedium)
+                    if (!active && cycle.bills.isNotEmpty()) Text("Los pagos se marcan durante el periodo.", style = MaterialTheme.typography.bodySmall)
+                    Column {
+                        cycle.bills.forEach { bill ->
+                            val paid = data.movements.firstOrNull { it.cycleId == cycle.id && it.billId == bill.id }
+                            Row(Modifier.fillMaxWidth().toggleable(value = paid != null, enabled = !busy && (paid != null || active), role = Role.Checkbox,
+                                onValueChange = { checked ->
+                                    if (!checked) delete = paid
+                                    else change(data.copy(movements = data.movements + Movement(UUID.randomUUID().toString(), cycle.id, today, bill.amount, category = "Fijos", billId = bill.id)))
+                                }).padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                                Checkbox(checked = paid != null, onCheckedChange = null, enabled = !busy && (paid != null || active))
+                                Column(Modifier.weight(1f).padding(horizontal = 10.dp)) {
+                                    Text(bill.name, style = MaterialTheme.typography.bodyLarge)
+                                    Text(paid?.let { "Pagado · ${it.date.readable()}" } ?: "Pendiente", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                }
+                                Text(formatMoney(bill.amount, cycle.currency), style = MaterialTheme.typography.titleSmall)
+                            }
+                            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = .5f))
+                        }
+                    }
+                    if (!today.isBefore(cycle.end)) Button(enabled = !busy, onClick = { dialog = "cycle" }, modifier = Modifier.fillMaxWidth()) { Text("Empezar siguiente periodo") }
                 }
-                if (cycle == null || !today.isBefore(cycle.end)) Button(enabled = !busy, onClick = { dialog = "cycle" }) { Text(if (cycle == null) "Abrir primer ciclo" else "Abrir siguiente ciclo") }
-                else Text("Podrás abrir el siguiente ciclo a partir del ${cycle.end}.")
             }
             1 -> {
-                Title("Movimientos")
-                if (cycle == null) Text("Abre un ciclo en Inicio para registrar movimientos.")
+                if (cycle == null) EmptyMessage(Icons.AutoMirrored.Filled.ReceiptLong, "Tu primer movimiento", "Empieza un periodo desde Inicio para añadir ingresos y gastos.")
                 else {
                     CycleLabel(cycle)
-                    Button(enabled = !busy, onClick = { edit = null; dialog = "movement" }) { Text("Añadir movimiento") }
                     val movements = remember(data.movements, cycle.id) { data.movements.filter { it.cycleId == cycle.id }.sortedByDescending { it.date } }
                     val currentPage = movementPage.coerceIn(0, lastPage(movements.size))
-                    if (movements.isEmpty()) Text("Todavía no hay movimientos.")
-                    Pages(currentPage, movements.size) { movementPage = it }
-                    movements.drop(currentPage * PAGE_SIZE).take(PAGE_SIZE).forEach { movement ->
-                        Card(Modifier.fillMaxWidth()) { Column(Modifier.padding(12.dp)) {
-                            Text("${if (movement.income) "+" else "−"}${formatMoney(movement.amount, cycle.currency)}", style = MaterialTheme.typography.titleMedium)
-                            Text("${movement.category} · ${movement.date}")
-                            if (movement.note.isNotBlank()) Text(movement.note)
-                            Row {
-                                if (movement.billId == null) TextButton(enabled = !busy, onClick = { edit = movement; dialog = "movement" }) { Text("Editar") }
-                                TextButton(enabled = !busy, onClick = { delete = movement }) { Text(if (movement.billId == null) "Eliminar" else "Desmarcar pago") }
+                    if (movements.isEmpty()) EmptyMessage(Icons.Default.AddCircleOutline, "Todo empieza aquí", "Pulsa + para anotar tu primer gasto o ingreso.")
+                    else {
+                        Text("${movements.size} movimientos", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Column {
+                            movements.drop(currentPage * PAGE_SIZE).take(PAGE_SIZE).forEach { movement ->
+                                MovementRow(movement, cycle.currency, busy, { edit = movement; dialog = "movement" }, { delete = movement })
                             }
-                        } }
+                        }
+                        Pages(currentPage, movements.size) { movementPage = it }
                     }
-                    Pages(currentPage, movements.size) { movementPage = it }
                 }
             }
             2 -> {
-                Title("Plan de ahorro")
-                val settings = data.settings
-                Amount("Sugerencia para próximos ciclos", suggestedTarget(settings), settings.currency)
-                Text("Sugerencia = máximo de cero e ingreso − gastos fijos − presupuesto variable.")
-                Amount("Ingreso configurado", settings.salary, settings.currency)
-                Amount("Fijos configurados", settings.fixedExpenses.sumOf { it.amount }, settings.currency)
-                Amount("Presupuesto variable", settings.variableBudget, settings.currency)
                 if (cycle != null) {
-                    HorizontalDivider()
                     CycleLabel(cycle)
-                    Amount("Meta de este ciclo", cycle.target, cycle.currency)
-                    val capacity = (cycle.income - cycle.bills.sumOf { it.amount } - cycle.variableBudget).coerceAtLeast(0)
-                    if (cycle.target > capacity) Text("La meta supera la capacidad prevista en ${formatMoney(cycle.target - capacity, cycle.currency)}.", color = MaterialTheme.colorScheme.secondary)
-                    Button(enabled = !busy, onClick = { dialog = "target" }) { Text("Cambiar meta de este ciclo") }
+                    val summary = summarize(cycle, data.movements)
+                    Card(shape = RoundedCornerShape(28.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer)) {
+                        Column(Modifier.fillMaxWidth().padding(24.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                            Icon(Icons.Default.Flag, null, tint = MaterialTheme.colorScheme.onSecondaryContainer)
+                            Amount("Tu meta de este periodo", cycle.target, cycle.currency)
+                            Text("Es lo que quieres reservar.", style = MaterialTheme.typography.bodyMedium)
+                            OutlinedButton(enabled = !busy, onClick = { dialog = "target" }) { Text("Cambiar meta") }
+                        }
+                    }
+                    Card(shape = RoundedCornerShape(24.dp)) {
+                        Column(Modifier.fillMaxWidth().padding(20.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                            Amount("Previsión al terminar", summary.forecast, cycle.currency)
+                            Text("Estimación según tus ingresos, fijos y gastos variables. El dinero aún no está ahorrado.", style = MaterialTheme.typography.bodyMedium)
+                            val capacity = (cycle.income - cycle.bills.sumOf { it.amount } - cycle.variableBudget).coerceAtLeast(0)
+                            if (cycle.target > capacity) Text("Tu meta supera lo previsto en ${formatMoney(cycle.target - capacity, cycle.currency)}.", color = MaterialTheme.colorScheme.secondary)
+                        }
+                    }
                 }
-                Text("Los ajustes afectan a próximos ciclos. Puedes cambiar expresamente la meta del ciclo mostrado.")
+                var expanded by remember { mutableStateOf(false) }
+                Card(shape = RoundedCornerShape(24.dp)) {
+                    Column(Modifier.fillMaxWidth().padding(20.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                        Amount("Meta sugerida para el próximo periodo", suggestedTarget(data.settings), data.settings.currency)
+                        TextButton(onClick = { expanded = !expanded }) { Text(if (expanded) "Ocultar cálculo" else "¿Cómo se calcula?"); Icon(if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore, null) }
+                        if (expanded) {
+                            Text("Ingreso − gastos fijos − presupuesto variable. Si queda menos de cero, la sugerencia es cero.")
+                            MoneyLine("Ingreso", data.settings.salary, data.settings.currency)
+                            MoneyLine("Fijos", data.settings.fixedExpenses.sumOf { it.amount }, data.settings.currency)
+                            MoneyLine("Presupuesto variable", data.settings.variableBudget, data.settings.currency)
+                            Text("La previsión del periodo usa el mayor entre el presupuesto variable y el gasto variable registrado.", style = MaterialTheme.typography.bodySmall)
+                        }
+                    }
+                }
+                Text("Los cambios en Ajustes se aplican al próximo periodo.", style = MaterialTheme.typography.bodySmall)
             }
             3 -> History(data)
             4 -> SettingsScreen(data.settings, busy, onSave = { change(data.copy(settings = it)) }, onExport = onExport, onImport = onImport)
         }
-        Spacer(Modifier.height(16.dp))
+        Spacer(Modifier.height(88.dp))
     }
-    if (dialog == "cycle") CycleForm(data.settings, cycle, today, onDismiss = { dialog = null }) { start, end, income ->
+    if (dialog == "cycle") CycleForm(data.settings, cycle, today, onDismiss = { dialog = null; pendingDialogSave = null }) { start, end, income ->
         val next = data.copy(cycles = data.cycles + newCycle(data.settings, start, end, income))
-        validateData(next)
-        save(next)
-        dialog = null
+        validateData(next); pendingDialogSave = next; save(next)
     }
-    if (dialog == "movement" && cycle != null) MovementForm(cycle, today, edit, onDismiss = { dialog = null }) { movement ->
+    if (dialog == "movement" && cycle != null) MovementForm(cycle, today, edit, onDismiss = { dialog = null; pendingDialogSave = null }) { movement ->
         val next = data.copy(movements = data.movements.filterNot { it.id == movement.id } + movement)
-        validateData(next)
-        save(next)
-        dialog = null
+        validateData(next); pendingDialogSave = next; save(next)
     }
-    if (dialog == "target" && cycle != null) MoneyForm("Meta del ciclo", cycle.target, cycle.currency, { dialog = null }) { amount ->
+    if (dialog == "target" && cycle != null) MoneyForm("Tu meta", cycle.target, cycle.currency, { dialog = null; pendingDialogSave = null }) { amount ->
         val next = data.copy(cycles = data.cycles.map { if (it.id == cycle.id) it.copy(target = amount) else it })
-        validateData(next)
-        save(next)
-        dialog = null
+        validateData(next); pendingDialogSave = next; save(next)
     }
-    delete?.let { movement -> AlertDialog(onDismissRequest = { delete = null }, title = { Text("¿Eliminar este movimiento?") },
-        text = { Text(if (movement.billId != null) "El gasto fijo volverá a estar pendiente." else "Se eliminará el movimiento del ciclo.") },
-        confirmButton = { TextButton(enabled = !busy, onClick = { change(data.copy(movements = data.movements.filterNot { it.id == movement.id })); delete = null }) { Text("Eliminar") } },
+    delete?.let { movement -> AlertDialog(onDismissRequest = { delete = null }, title = { Text(if (movement.billId != null) "¿Desmarcar este pago?" else "¿Eliminar movimiento?") },
+        text = { Text(if (movement.billId != null) "El gasto fijo volverá a estar pendiente." else "Se eliminará este movimiento del periodo.") },
+        confirmButton = { TextButton(enabled = !busy, onClick = { change(data.copy(movements = data.movements.filterNot { it.id == movement.id })); delete = null }) { Text(if (movement.billId != null) "Desmarcar" else "Eliminar") } },
         dismissButton = { TextButton(onClick = { delete = null }) { Text("Cancelar") } }) }
 }
 
 @Composable private fun History(data: AppData) {
     var selected by remember { mutableStateOf<String?>(null) }
     var historyPage by remember { mutableIntStateOf(0) }
+    var expanded by remember { mutableStateOf(false) }
     val cycles = remember(data.cycles) { data.cycles.sortedByDescending { it.start } }
+    val cycle = cycles.firstOrNull { it.id == selected } ?: cycles.firstOrNull()
+    if (cycle == null) { EmptyMessage(Icons.Default.BarChart, "Tu dinero de un vistazo", "Aquí verás cómo va cada periodo cuando empieces el primero."); return }
     val currentPage = historyPage.coerceIn(0, lastPage(cycles.size))
-    Title("Resúmenes")
-    if (data.cycles.isEmpty()) Text("Los ciclos aparecerán aquí cuando abras el primero.")
-    Pages(currentPage, cycles.size) { historyPage = it }
-    cycles.drop(currentPage * PAGE_SIZE).take(PAGE_SIZE).forEach { cycle ->
-        OutlinedButton(onClick = { selected = cycle.id }, modifier = Modifier.fillMaxWidth()) { Text("${cycle.start} · ${cycle.end.minusDays(1)} (${cycle.currency})") }
-    }
-    Pages(currentPage, cycles.size) { historyPage = it }
-    val cycle = data.cycles.firstOrNull { it.id == selected } ?: data.cycles.maxByOrNull { it.start }
-    if (cycle != null) {
-        CycleLabel(cycle)
-        val summary = summarize(cycle, data.movements)
-        Amount("Ingresos registrados", summary.income, cycle.currency)
-        Amount("Gastos pagados", summary.spent, cycle.currency)
-        Amount("Saldo registrado", summary.balance, cycle.currency)
-        Amount("Fijos pendientes", summary.pendingBills, cycle.currency)
-        Text("El saldo registrado no implica una transferencia real a una cuenta de ahorro.", style = MaterialTheme.typography.bodySmall)
-        Title("Gastos por categoría")
-        val categories = remember(data.movements, cycle.id) {
-            data.movements.filter { it.cycleId == cycle.id && !it.income }.groupBy { it.category }
-                .map { (category, movements) -> category to movements.sumOf { it.amount } }.sortedBy { it.first }
+    Box {
+        OutlinedButton(onClick = { expanded = true }, modifier = Modifier.fillMaxWidth()) {
+            Icon(Icons.Default.CalendarMonth, null); Spacer(Modifier.width(8.dp))
+            Text("${cycle.start.readable()} – ${cycle.end.minusDays(1).readable()} · ${cycle.start.year}", modifier = Modifier.weight(1f))
+            Icon(Icons.Default.ExpandMore, "Elegir periodo")
         }
-        var categoryPage by remember(cycle.id) { mutableIntStateOf(0) }
-        val currentCategoryPage = categoryPage.coerceIn(0, lastPage(categories.size))
-        if (categories.isEmpty()) Text("Sin gastos registrados.")
-        Pages(currentCategoryPage, categories.size) { categoryPage = it }
-        categories.drop(currentCategoryPage * PAGE_SIZE).take(PAGE_SIZE).forEach { (category, total) -> Amount(category, total, cycle.currency) }
-        Pages(currentCategoryPage, categories.size) { categoryPage = it }
+        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+            cycles.drop(currentPage * PAGE_SIZE).take(PAGE_SIZE).forEach { item ->
+                DropdownMenuItem(text = { Text("${item.start.readable()} – ${item.end.minusDays(1).readable()} · ${item.start.year} · ${item.currency}") },
+                    onClick = { selected = item.id; expanded = false })
+            }
+            if (cycles.size > PAGE_SIZE) {
+                DropdownMenuItem(text = { Text("Periodos más recientes") }, enabled = currentPage > 0, onClick = { historyPage-- })
+                DropdownMenuItem(text = { Text("Periodos anteriores") }, enabled = currentPage < lastPage(cycles.size), onClick = { historyPage++ })
+            }
+        }
+    }
+    val summary = summarize(cycle, data.movements)
+    Card(shape = RoundedCornerShape(28.dp)) {
+        Column(Modifier.fillMaxWidth().padding(24.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+            Amount("Saldo registrado", summary.balance, cycle.currency)
+            HorizontalDivider()
+            MoneyLine("Ingresos", summary.income, cycle.currency, Icons.Default.SouthWest)
+            MoneyLine("Gastos pagados", summary.spent, cycle.currency, Icons.Default.NorthEast)
+            if (summary.pendingBills > 0) MoneyLine("Fijos pendientes", summary.pendingBills, cycle.currency, Icons.Default.Schedule)
+        }
+    }
+    Text("El saldo es lo registrado; no confirma una transferencia a tu ahorro.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    Title("En qué has gastado")
+    val categories = remember(data.movements, cycle.id) {
+        data.movements.filter { it.cycleId == cycle.id && !it.income }.groupBy { it.category }
+            .map { (category, movements) -> category to movements.sumOf { it.amount } }.sortedByDescending { it.second }
+    }
+    var categoryPage by remember(cycle.id) { mutableIntStateOf(0) }
+    val currentCategoryPage = categoryPage.coerceIn(0, lastPage(categories.size))
+    if (categories.isEmpty()) Text("Aún no hay gastos en este periodo.")
+    categories.drop(currentCategoryPage * PAGE_SIZE).take(PAGE_SIZE).forEach { (category, total) ->
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            MoneyLine(category, total, cycle.currency, categoryIcon(category))
+            LinearProgressIndicator(progress = { if (summary.spent == 0L) 0f else (total.toFloat() / summary.spent).coerceIn(0f, 1f) },
+                modifier = Modifier.fillMaxWidth().height(8.dp).semantics { contentDescription = "$category: ${formatMoney(total, cycle.currency)} del total de gastos" },
+                color = MaterialTheme.colorScheme.secondary)
+        }
+    }
+    Pages(currentCategoryPage, categories.size) { categoryPage = it }
+}
+
+@Composable private fun BudgetCard(spent: Long, budget: Long, currency: String) {
+    Card(shape = RoundedCornerShape(24.dp)) {
+        Column(Modifier.fillMaxWidth().padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Text("Gastos del día a día", style = MaterialTheme.typography.titleMedium)
+            Text("${formatMoney(spent, currency)} de ${formatMoney(budget, currency)}", style = MaterialTheme.typography.bodyLarge)
+            LinearProgressIndicator(progress = { if (budget == 0L) { if (spent > 0L) 1f else 0f } else (spent.toFloat() / budget).coerceIn(0f, 1f) },
+                modifier = Modifier.fillMaxWidth().height(10.dp).semantics { contentDescription = "Presupuesto variable: gastados ${formatMoney(spent, currency)} de ${formatMoney(budget, currency)}" },
+                color = if (spent > budget) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary)
+            Text(if (spent > budget) "Has superado el presupuesto en ${formatMoney(spent - budget, currency)}" else "Quedan ${formatMoney(budget - spent, currency)} de tu presupuesto variable",
+                style = MaterialTheme.typography.bodySmall, color = if (spent > budget) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant)
+        }
     }
 }
 
+@Composable private fun MovementRow(movement: Movement, currency: String, busy: Boolean, onEdit: () -> Unit, onDelete: () -> Unit) {
+    var menu by remember { mutableStateOf(false) }
+    Row(Modifier.fillMaxWidth().clickable(enabled = !busy && movement.billId == null, onClickLabel = "Editar movimiento", onClick = onEdit).padding(vertical = 12.dp), verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+        Surface(shape = RoundedCornerShape(16.dp), color = MaterialTheme.colorScheme.surfaceContainerHigh) {
+            Icon(if (movement.income) Icons.Default.SouthWest else categoryIcon(movement.category), null, Modifier.padding(12.dp).size(22.dp),
+                tint = if (movement.income) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.secondary)
+        }
+        Column(Modifier.weight(1f)) {
+            Text(movement.note.ifBlank { movement.category }, style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text("${movement.category} · ${movement.date.readable()}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+        Text("${if (movement.income) "+" else "−"}${formatMoney(movement.amount, currency)}", style = MaterialTheme.typography.titleSmall,
+            color = if (movement.income) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface)
+        Box {
+            IconButton(enabled = !busy, onClick = { menu = true }) { Icon(Icons.Default.MoreVert, "Opciones de ${movement.category}, ${formatMoney(movement.amount, currency)}") }
+            DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
+                DropdownMenuItem(text = { Text(if (movement.billId == null) "Eliminar" else "Desmarcar pago") }, leadingIcon = { Icon(Icons.Default.DeleteOutline, null) }, onClick = { menu = false; onDelete() })
+            }
+        }
+    }
+    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = .45f))
+}
+
+private fun categoryIcon(category: String): ImageVector = when (category.lowercase(Locale.ROOT)) {
+    "comida", "alimentación", "supermercado" -> Icons.Default.Restaurant
+    "transporte" -> Icons.Default.DirectionsBus
+    "ocio" -> Icons.Default.Celebration
+    "salud" -> Icons.Default.FavoriteBorder
+    "compras", "ropa" -> Icons.Default.ShoppingBag
+    "fijos", "hogar", "vivienda" -> Icons.Default.Home
+    else -> Icons.AutoMirrored.Filled.ReceiptLong
+}
+@Composable private fun EmptyMessage(icon: ImageVector, title: String, text: String) {
+    Column(Modifier.fillMaxWidth().padding(vertical = 32.dp), verticalArrangement = Arrangement.spacedBy(14.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+        Icon(icon, null, Modifier.size(56.dp), tint = MaterialTheme.colorScheme.secondary)
+        Text(title, style = MaterialTheme.typography.headlineSmall)
+        Text(text, style = MaterialTheme.typography.bodyLarge)
+    }
+}
+@Composable private fun MoneyLine(label: String, amount: Long, currency: String, icon: ImageVector? = null) {
+    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        icon?.let { Icon(it, null, Modifier.size(20.dp), tint = MaterialTheme.colorScheme.secondary) }
+        Text(label, Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium)
+        Text(formatMoney(amount, currency), style = MaterialTheme.typography.titleSmall)
+    }
+}
 private const val PAGE_SIZE = 50
 private fun lastPage(count: Int) = ((count - 1) / PAGE_SIZE).coerceAtLeast(0)
 @Composable private fun Pages(page: Int, count: Int, onPage: (Int) -> Unit) {
-    if (count > PAGE_SIZE) {
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-            TextButton(enabled = page > 0, onClick = { onPage(page - 1) }) { Text("Anterior") }
-            Text("${page + 1} / ${lastPage(count) + 1}", modifier = Modifier.padding(top = 12.dp))
-            TextButton(enabled = page < lastPage(count), onClick = { onPage(page + 1) }) { Text("Siguiente") }
-        }
+    if (count > PAGE_SIZE) Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+        TextButton(enabled = page > 0, onClick = { onPage(page - 1) }) { Text("Anterior") }
+        Text("${page + 1} / ${lastPage(count) + 1}")
+        TextButton(enabled = page < lastPage(count), onClick = { onPage(page + 1) }) { Text("Siguiente") }
     }
 }
-
-@Composable internal fun Title(text: String) { Text(text, style = MaterialTheme.typography.titleLarge) }
-@Composable private fun CycleLabel(cycle: Cycle) { Text("${cycle.start} a ${cycle.end.minusDays(1)} · siguiente cobro ${cycle.end}", style = MaterialTheme.typography.bodyMedium) }
+@Composable internal fun Title(text: String) { Text(text, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold) }
+@Composable private fun CycleLabel(cycle: Cycle) { Text("${cycle.start.readable()} – ${cycle.end.minusDays(1).readable()} · ${cycle.start.year}", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant) }
 @Composable internal fun Amount(label: String, amount: Long, currency: String) {
-    Column { Text(label, style = MaterialTheme.typography.bodyMedium); Text(formatMoney(amount, currency), style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.primary) }
+    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Text(label, style = MaterialTheme.typography.bodyMedium)
+        Text(formatMoney(amount, currency), style = MaterialTheme.typography.headlineMedium, color = if (amount < 0) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary)
+    }
 }

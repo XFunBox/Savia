@@ -1,16 +1,26 @@
 package io.github.xfunbox.savia.ui
 
 import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.compose.BackHandler
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ReceiptLong
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.PieChart
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.text.font.FontWeight
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
@@ -20,6 +30,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.time.LocalDate
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SaviaApp() {
     val context = LocalContext.current
@@ -31,6 +42,12 @@ fun SaviaApp() {
     var error by remember { mutableStateOf<String?>(null) }
     var notice by remember { mutableStateOf<String?>(null) }
     var page by remember { mutableIntStateOf(0) }
+    var addRequest by remember { mutableIntStateOf(0) }
+    val snackbar = remember { SnackbarHostState() }
+    BackHandler(enabled = page != 0) { page = 0 }
+    LaunchedEffect(notice) {
+        notice?.let { snackbar.showSnackbar(it); notice = null }
+    }
     var today by remember { mutableStateOf(LocalDate.now()) }
     var pendingImport by remember { mutableStateOf<String?>(null) }
     val owner = LocalLifecycleOwner.current
@@ -49,7 +66,7 @@ fun SaviaApp() {
         scope.launch {
             try {
                 data = withContext(Dispatchers.IO) { store.load() }
-                if (data!!.cycles.isEmpty()) page = 4
+                page = 0
             } catch (e: Exception) { error = e.message ?: "No se pudieron cargar los datos." }
             finally { busy = false; loading = false }
         }
@@ -62,6 +79,7 @@ fun SaviaApp() {
             try {
                 withContext(Dispatchers.IO) { store.save(next) }
                 data = next
+                if (page == 4 && next.cycles.isEmpty()) page = 0
                 notice = "Cambios guardados"
             } catch (e: Exception) { error = e.message ?: "No se pudieron guardar los cambios." }
             finally { busy = false }
@@ -117,25 +135,36 @@ fun SaviaApp() {
     LaunchedEffect(Unit) { load() }
     MaterialTheme(colorScheme = darkColorScheme(
         primary = Color(0xFFB3FF66), secondary = Color(0xFFB59AFF),
+        primaryContainer = Color(0xFF243824), onPrimaryContainer = Color(0xFFE2FFD2),
+        secondaryContainer = Color(0xFF2D2543), onSecondaryContainer = Color(0xFFEEE1FF),
         background = Color(0xFF101014), surface = Color(0xFF19191F),
-        onPrimary = Color(0xFF152000)
-    )) {
-        Scaffold(bottomBar = {
-            if (data != null) NavigationBar {
-                listOf("Inicio", "Gastos", "Plan", "Resumen", "Ajustes").forEachIndexed { index, title ->
+        surfaceVariant = Color(0xFF262731), onSurfaceVariant = Color(0xFFBFC1CD),
+        onBackground = Color(0xFFF3F3F8), onSurface = Color(0xFFF3F3F8),
+        onPrimary = Color(0xFF152000), error = Color(0xFFFFB4AB)
+    ), shapes = Shapes(small = RoundedCornerShape(12.dp), medium = RoundedCornerShape(20.dp), large = RoundedCornerShape(28.dp))) {
+        Scaffold(snackbarHost = { SnackbarHost(snackbar) },
+            topBar = { TopAppBar(title = { Text(when(page) { 1 -> "Movimientos"; 2 -> "Tu meta"; 3 -> "Resumen"; 4 -> "Ajustes"; else -> "Ahorro" }, fontWeight = FontWeight.Bold) },
+                navigationIcon = { if (page == 2 || page == 4) IconButton(onClick = { page = 0 }) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Volver al inicio") } },
+                actions = { if (page != 4 && data != null) IconButton(onClick = { page = 4 }) { Icon(Icons.Default.Settings, "Ajustes") } }) },
+            floatingActionButton = {
+                val latest = data?.cycles?.maxByOrNull { it.start }
+                if (latest != null && !busy && (page == 0 || page == 1)) ExtendedFloatingActionButton(
+                    onClick = { if (!busy) { page = 1; addRequest++ } },
+                    icon = { Icon(Icons.Default.Add, null) }, text = { Text("Añadir gasto") })
+            }, bottomBar = {
+            if (data != null && page != 2 && page != 4) NavigationBar(containerColor = MaterialTheme.colorScheme.background) {
+                listOf(0 to "Inicio", 1 to "Movimientos", 3 to "Resumen").forEach { (index, title) ->
                     NavigationBarItem(selected = page == index, onClick = { page = index },
-                        icon = { Text(listOf("⌂", "€", "◎", "≡", "⚙")[index]) }, label = { Text(title) })
+                        icon = { Icon(when(index) { 1 -> Icons.AutoMirrored.Filled.ReceiptLong; 3 -> Icons.Default.PieChart; else -> Icons.Default.Home }, null) }, label = { Text(title) })
                 }
             }
         }) { padding ->
             Column(Modifier.fillMaxSize().padding(padding).padding(horizontal = 16.dp)) {
-                Text("Ahorro", style = MaterialTheme.typography.headlineMedium, modifier = Modifier.padding(vertical = 12.dp))
                 if (busy || loading) LinearProgressIndicator(Modifier.fillMaxWidth())
                 error?.let { message ->
                     Text(message, color = MaterialTheme.colorScheme.error, modifier = Modifier.padding(vertical = 8.dp))
                     TextButton(onClick = { error = null }) { Text("Ocultar aviso") }
                 }
-                notice?.let { Text(it, color = MaterialTheme.colorScheme.primary) }
                 val current = data
                 if (current == null) {
                     if (!loading) {
@@ -145,10 +174,13 @@ fun SaviaApp() {
                     }
                 } else {
                     Box(Modifier.weight(1f)) {
+                        CompositionLocalProvider(LocalFormBusy provides busy, LocalFormSaveError provides error) {
                         Screens(current, page, today, busy, ::save,
                             onSettings = { page = 4 },
                             onExport = { export.launch("ahorro-${LocalDate.now()}.json") },
-                            onImport = { import.launch(arrayOf("application/json", "text/plain", "application/octet-stream")) })
+                            onImport = { import.launch(arrayOf("application/json", "text/plain", "application/octet-stream")) },
+                            addRequest = addRequest, onPlan = { page = 2 })
+                        }
                     }
                 }
             }

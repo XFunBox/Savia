@@ -4,7 +4,7 @@ Aplicación para cualquier persona, sin cuenta ni servidor. Registra ingresos, g
 
 ## Decisiones de implementación
 
-Kotlin y Jetpack Compose nativos, Android 8 o posterior. Se eligen para el destino Android pedido. Flutter sería útil si se añadiera iOS; una web empaquetada añadiría una capa que este alcance no necesita. Datos en almacenamiento privado con escrituras atómicas, sin permiso de Internet ni copia automática en nube. Copias manuales JSON mediante el selector del sistema.
+Kotlin y Jetpack Compose nativos, Android 12 o posterior. Se eligen para el destino Android pedido. Flutter sería útil si se añadiera iOS; una web empaquetada añadiría una capa que este alcance no necesita. Datos en almacenamiento privado con escrituras atómicas, sin permiso de Internet ni copia automática en nube. Copias manuales JSON mediante el selector del sistema.
 
 Cinco destinos: Inicio, Movimientos, Plan, Resúmenes, Ajustes. Interfaz en español, oscura con verde y morado, controles accesibles y desplazamiento con teclado. Sin datos financieros de ejemplo en el estado inicial.
 
