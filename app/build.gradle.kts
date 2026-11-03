@@ -10,8 +10,8 @@ android {
         applicationId = "io.github.xfunbox.savia"
         minSdk = 31
         targetSdk = 36
-        versionCode = 4
-        versionName = "2.0.0"
+        versionCode = 5
+        versionName = "2.1.0"
     }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
