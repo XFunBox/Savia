@@ -4,15 +4,19 @@ Aplicación Android para organizar gastos y ahorrar, sin cuenta y con los datos 
 
 ## Descargar e instalar
 
-**[Descargar Savia 2.0.0 desde Releases](https://github.com/XFunBox/Savia/releases/tag/v2.0.0)**
+**[Descargar Savia 2.1.0 desde Releases](https://github.com/XFunBox/Savia/releases/tag/v2.1.0)**
 
-[Descarga directa de Savia 2.0.0](descargas/Savia-2.0.0.apk?raw=true)
+[Descarga directa de Savia 2.1.0](https://github.com/XFunBox/Savia/releases/download/v2.1.0/Savia-2.1.0.apk)
 
-1. Descarga `Savia-2.0.0.apk` desde Releases o desde el enlace directo.
+1. Descarga `Savia-2.1.0.apk` desde Releases o desde el enlace directo.
 2. Abre la APK y, si Android lo solicita, permite instalar aplicaciones desde ese navegador o gestor de archivos.
-3. Abre **Savia**, guarda tu configuración en Ajustes y crea el primer ciclo desde Inicio.
+3. Abre **Savia**, configura Mi presupuesto y crea el primer periodo desde Inicio.
 
-Requiere **Android 12 o posterior**. La instalación y el flujo básico se comprobaron en un emulador Android 12; queda pendiente la valoración en teléfonos reales.
+Requiere **Android 12 o posterior**. La versión 2.1.0 pasa pruebas, compilación y lint automáticos; la revisión visual y la prueba de migración en teléfono siguen pendientes.
+
+### Actualización desde Savia 2.0.0 de pruebas
+
+La versión 2.1.0 usa la firma definitiva y requiere reinstalar una vez. **Exporta tus datos en JSON y guarda la copia fuera de la app antes de desinstalar 2.0.0.** Después instala 2.1.0 e importa la copia. No intentes actualizar directamente la APK antigua de pruebas. Las próximas versiones conservarán la nueva firma.
 
 ### Actualización desde Ahorro 1.0
 
@@ -24,18 +28,20 @@ Savia tiene un identificador Android nuevo, así que se instala como una aplicac
 
 Las copias JSON no están cifradas. No desinstales Ahorro hasta comprobar la importación en Savia.
 
-## Novedades de 2.0.0
+## Novedades de 2.1.0
 
-- Nueva identidad **Savia** y un identificador Android independiente.
-- Se mantienen las funciones de búsqueda de movimientos y repetición de gastos de la versión 1.0.0.
-- APK optimizada de aproximadamente 2,8 MB.
+- Varios objetivos de ahorro que comparten un presupuesto.
+- Ingresos, gastos y ahorro reservado separados, con desglose y avisos.
+- Borrado de periodos y sus movimientos con confirmación.
+- Copias de seguridad con objetivos y compatibilidad con las copias anteriores.
+- Firma definitiva y publicación con verificaciones automáticas.
 
 ## Funciones
 
 - Salario neto, gastos fijos y fechas de cobro configurables.
 - Registro de gastos e ingresos durante cada periodo.
 - Presupuestos de cobro a cobro.
-- Objetivo de ahorro manual o sugerido, con explicación del cálculo.
+- Ahorro reservado manual o sugerido y varios objetivos independientes, con explicación del cálculo.
 - Resúmenes por periodo y categorías.
 - Funcionamiento local y copias de seguridad manuales.
 
@@ -56,7 +62,8 @@ El material de firma no se incluye en el repositorio.
 ## Documentación
 
 - [Diseño y alcance](docs/diseno.md).
-- [Cambios de Savia 2.0.0](docs/notas-version-2.0.md).
+- [Cambios de Savia 2.1.0](docs/cambios-2.1.0.md).
+- [Cambios anteriores de Savia 2.0.0](docs/notas-version-2.0.md).
 - [Firma y publicación de actualizaciones](docs/publicacion.md).
 
 ## Licencia
