@@ -39,6 +39,7 @@ internal fun GoalsScreen(data: AppData, cycle: Cycle?, busy: Boolean, save: (App
             Column(Modifier.fillMaxWidth().padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Amount("Ahorro reservado en este periodo", cycle.target, cycle.currency)
                 MoneyLine("Ahorro previsto al terminar", summary.forecast, cycle.currency)
+                if (cycle.target > summary.forecast) Text("Tu reserva supera el ahorro previsto en ${formatMoney(cycle.target - summary.forecast, cycle.currency)}.", color = MaterialTheme.colorScheme.error)
                 val assigned = data.goals.filter { it.currency == cycle.currency }.sumOf { it.periodAmount }
                 MoneyLine("Repartido entre objetivos", assigned, cycle.currency)
                 if (assigned > cycle.target) Text("Las aportaciones superan tu reserva en ${formatMoney(assigned - cycle.target, cycle.currency)}.", color = MaterialTheme.colorScheme.error)

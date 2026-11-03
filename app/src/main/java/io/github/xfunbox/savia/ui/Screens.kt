@@ -95,6 +95,7 @@ internal fun Screens(data: AppData, page: Int, today: LocalDate, busy: Boolean,
                     BudgetCard(summary.variableSpent, cycle.variableBudget, cycle.currency)
                     Amount("Ahorro previsto al terminar", summary.forecast, cycle.currency)
                     Text("Estimación tras tus gastos previstos; aún no es dinero ahorrado.", style = MaterialTheme.typography.bodySmall)
+                    if (cycle.target > summary.forecast) Text("Tu reserva supera el ahorro previsto en ${formatMoney(cycle.target - summary.forecast, cycle.currency)}. Revisa los gastos o ajusta la reserva.", color = MaterialTheme.colorScheme.error)
                     OutlinedButton(enabled = !busy, onClick = { dialog = "target" }) { Text("Cambiar ahorro reservado") }
                     Card(onClick = onPlan, shape = RoundedCornerShape(24.dp), modifier = Modifier.fillMaxWidth()) {
                         Row(Modifier.padding(20.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
