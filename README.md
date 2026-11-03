@@ -4,7 +4,7 @@ Aplicación Android para organizar gastos y ahorrar, sin cuenta y con los datos 
 
 ## Descargar e instalar
 
-**[Descargar Savia 2.0.0 desde Releases](https://github.com/XFunBox/ahorro-app/releases/tag/v2.0.0)**
+**[Descargar Savia 2.0.0 desde Releases](https://github.com/XFunBox/Savia/releases/tag/v2.0.0)**
 
 [Descarga directa de Savia 2.0.0](descargas/Savia-2.0.0.apk?raw=true)
 
@@ -46,15 +46,18 @@ Capturas con datos ficticios: [Inicio](docs/capturas/inicio-0.2.png), [Añadir g
 Requisitos: JDK 17 y Android SDK con plataforma 36 y Build Tools 36.0.0. Configura ANDROID_HOME o sdk.dir en local.properties (archivo excluido de Git). Android Studio también puede abrir esta carpeta.
 
 ```powershell
-.\gradlew.bat testDebugUnitTest assembleRelease lintRelease
+.\gradlew.bat testDebugUnitTest assembleDebug lintDebug
 ```
 
-La APK se genera en `app/build/outputs/apk/release/app-release.apk`. El material de firma no se incluye en el repositorio.
+La APK de desarrollo se genera en `app/build/outputs/apk/debug/app-debug.apk`.
+Para generar una actualización instalable sobre Savia 2.0.0, sigue [Firma y publicación](docs/publicacion.md).
+El material de firma no se incluye en el repositorio.
 
 ## Documentación
 
 - [Diseño y alcance](docs/diseno.md).
 - [Cambios de Savia 2.0.0](docs/notas-version-2.0.md).
+- [Firma y publicación de actualizaciones](docs/publicacion.md).
 
 ## Licencia
 

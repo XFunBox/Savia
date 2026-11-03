@@ -18,12 +18,27 @@ android {
         targetCompatibility = JavaVersion.VERSION_17
     }
     buildFeatures { compose = true }
+    val signingVariables = listOf(
+        "SAVIA_KEYSTORE_FILE", "SAVIA_STORE_PASSWORD", "SAVIA_KEY_ALIAS", "SAVIA_KEY_PASSWORD"
+    )
+    val releaseSigning = signingVariables.map { System.getenv(it) }
+    if (releaseSigning.any { !it.isNullOrBlank() }) {
+        require(releaseSigning.all { !it.isNullOrBlank() }) {
+            "La firma de Savia requiere: ${signingVariables.joinToString()}"
+        }
+        signingConfigs.create("saviaRelease") {
+            storeFile = file(releaseSigning[0]!!)
+            storePassword = releaseSigning[1]
+            keyAlias = releaseSigning[2]
+            keyPassword = releaseSigning[3]
+        }
+    }
     buildTypes {
         release {
             isMinifyEnabled = true
             isShrinkResources = true
-            // Conservar el certificado de Savia para sus futuras actualizaciones.
-            signingConfig = signingConfigs.getByName("debug")
+            // Sin la clave original se genera una APK sin firmar, nunca con otra clave debug.
+            signingConfig = signingConfigs.findByName("saviaRelease")
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"))
         }
     }
