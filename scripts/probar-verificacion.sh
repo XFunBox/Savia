@@ -2,6 +2,19 @@
 # Prueba los rechazos de publicación sin necesitar una clave privada.
 set -euo pipefail
 root="$(cd "$(dirname "$0")/.." && pwd)"
+# Con SDK, comprueba también la firma real de la APK histórica: debe superar
+# firma/identidad/versión y rechazarse únicamente por su código antiguo.
+sdk="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-}}"
+if [ -x "$sdk/build-tools/36.0.0/apksigner" ]; then
+  if result="$(bash "$root/scripts/verificar-apk.sh" "$root/descargas/Savia-2.0.0.apk" 2.0.0 2>&1)"; then
+    echo 'ERROR: se ha aceptado volver a publicar la APK histórica'
+    exit 1
+  fi
+  [ "$result" = 'versionCode debe superar el 4 de Savia 2.0.0.' ] || { printf '%s\n' "$result"; exit 1; }
+  echo 'Firma e identidad de la APK histórica comprobadas con herramientas Android reales.'
+else
+  echo 'Sin SDK: comprobación criptográfica de APK histórica pendiente; se ejecuta en CI.'
+fi
 temporary="$(mktemp -d)"
 trap 'rm -rf "$temporary"' EXIT
 export ANDROID_HOME="$temporary/sdk"
