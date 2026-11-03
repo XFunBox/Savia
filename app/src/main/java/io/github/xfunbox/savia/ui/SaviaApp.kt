@@ -143,19 +143,19 @@ fun SaviaApp() {
         onPrimary = Color(0xFF152000), error = Color(0xFFFFB4AB)
     ), shapes = Shapes(small = RoundedCornerShape(12.dp), medium = RoundedCornerShape(20.dp), large = RoundedCornerShape(28.dp))) {
         Scaffold(snackbarHost = { SnackbarHost(snackbar) },
-            topBar = { TopAppBar(title = { Text(when(page) { 1 -> "Movimientos"; 2 -> "Tu meta"; 3 -> "Resumen"; 4 -> "Ajustes"; else -> "Savia" }, fontWeight = FontWeight.Bold) },
-                navigationIcon = { if (page == 2 || page == 4) IconButton(onClick = { page = 0 }) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Volver al inicio") } },
-                actions = { if (page != 4 && data != null) IconButton(onClick = { page = 4 }) { Icon(Icons.Default.Settings, "Ajustes") } }) },
+            topBar = { TopAppBar(title = { Text(when(page) { 1 -> "Movimientos"; 2 -> "Objetivos"; 3 -> "Resumen"; 4 -> "Mi presupuesto"; else -> "Savia" }, fontWeight = FontWeight.Bold) },
+                navigationIcon = { if (page == 4) IconButton(onClick = { page = 0 }) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Volver al inicio") } },
+                actions = { if (page != 4 && data != null) IconButton(onClick = { page = 4 }) { Icon(Icons.Default.Settings, "Mi presupuesto") } }) },
             floatingActionButton = {
                 val latest = data?.cycles?.maxByOrNull { it.start }
                 if (latest != null && !busy && (page == 0 || page == 1)) ExtendedFloatingActionButton(
                     onClick = { if (!busy) { page = 1; addRequest++ } },
                     icon = { Icon(Icons.Default.Add, null) }, text = { Text("Añadir gasto") })
             }, bottomBar = {
-            if (data != null && page != 2 && page != 4) NavigationBar(containerColor = MaterialTheme.colorScheme.background) {
-                listOf(0 to "Inicio", 1 to "Movimientos", 3 to "Resumen").forEach { (index, title) ->
+            if (data != null && page != 4) NavigationBar(containerColor = MaterialTheme.colorScheme.background) {
+                listOf(0 to "Inicio", 1 to "Movimientos", 2 to "Objetivos", 3 to "Resumen").forEach { (index, title) ->
                     NavigationBarItem(selected = page == index, onClick = { page = index },
-                        icon = { Icon(when(index) { 1 -> Icons.AutoMirrored.Filled.ReceiptLong; 3 -> Icons.Default.PieChart; else -> Icons.Default.Home }, null) }, label = { Text(title) })
+                        icon = { Icon(when(index) { 1 -> Icons.AutoMirrored.Filled.ReceiptLong; 2 -> Icons.Default.Flag; 3 -> Icons.Default.PieChart; else -> Icons.Default.Home }, null) }, label = { Text(title) })
                 }
             }
         }) { padding ->
@@ -188,7 +188,7 @@ fun SaviaApp() {
         if (pendingImport != null) AlertDialog(
             onDismissRequest = { if (!busy) pendingImport = null },
             title = { Text("¿Reemplazar todos los datos?") },
-            text = { Text("Esta copia sustituirá ajustes, ciclos y movimientos actuales. El archivo contiene datos financieros y no está cifrado.") },
+            text = { Text("Esta copia sustituirá presupuesto, objetivos, periodos y movimientos actuales. El archivo contiene datos financieros y no está cifrado.") },
             confirmButton = { TextButton(enabled = !busy, onClick = {
                 val text = pendingImport ?: return@TextButton
                 busy = true

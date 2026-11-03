@@ -39,13 +39,13 @@ import java.time.format.DateTimeFormatter
 import java.util.Locale
 import java.util.UUID
 
-private fun inputMoney(amount: Long) = "${amount / 100}.${(amount % 100).toString().padStart(2, '0')}"
-private fun money(text: String) = requireNotNull(parseMoney(text)) { "Revisa el importe: usa coma o punto y hasta dos decimales." }
+internal fun inputMoney(amount: Long) = "${amount / 100}.${(amount % 100).toString().padStart(2, '0')}"
+internal fun money(text: String) = requireNotNull(parseMoney(text)) { "Revisa el importe: usa coma o punto y hasta dos decimales." }
 private val displayDate = DateTimeFormatter.ofPattern("d MMM yyyy", Locale.forLanguageTag("es-ES"))
 internal val LocalFormBusy = compositionLocalOf { false }
 internal val LocalFormSaveError = compositionLocalOf<String?> { null }
 
-@Composable private fun Form(title: String, dismiss: () -> Unit, submit: () -> Unit, content: @Composable ColumnScope.() -> Unit) {
+@Composable internal fun Form(title: String, dismiss: () -> Unit, submit: () -> Unit, content: @Composable ColumnScope.() -> Unit) {
     var error by remember { mutableStateOf<String?>(null) }
     val busy = LocalFormBusy.current
     AlertDialog(onDismissRequest = { if (!busy) dismiss() }, title = { Text(title) },
@@ -220,8 +220,8 @@ internal val LocalFormSaveError = compositionLocalOf<String?> { null }
     var editingBill by remember { mutableStateOf<FixedExpense?>(null) }
     var removeBill by remember { mutableStateOf<FixedExpense?>(null) }
     var error by remember { mutableStateOf<String?>(null) }
-    Text("Tu plan para los próximos periodos. El historial conserva sus importes.", color = MaterialTheme.colorScheme.onSurfaceVariant)
-    Accordion("Ingresos y cobro", "Ingreso habitual, día de cobro y moneda", section == "income", { if (!busy) section = if (section == "income") null else "income" }) {
+    Text("Organiza tu próximo periodo: ingresos, gastos y ahorro. Los periodos anteriores conservan sus importes.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+    Accordion("1. Ingresos y cobro", "Ingreso habitual, día de cobro y moneda", section == "income", { if (!busy) section = if (section == "income") null else "income" }) {
         Field("Ingreso neto habitual ($currency)", salary, { if (!busy) salary = it }, true)
         Field("¿Qué día del mes cobras? (1–31)", payday, { if (!busy) payday = it }, true)
         Text("Si ese mes no tiene ese día, usaremos el último día del mes.", style = MaterialTheme.typography.bodySmall)
@@ -230,7 +230,7 @@ internal val LocalFormSaveError = compositionLocalOf<String?> { null }
             listOf("EUR", "USD", "GBP", "MXN").forEach { code -> FilterChip(selected = currency == code, enabled = !busy, onClick = { if (!busy) currency = code }, label = { Text(code) }, modifier = Modifier.heightIn(min = 48.dp)) }
         }
     }
-    Accordion("Gastos fijos", if (bills.isEmpty()) "Alquiler, luz, suscripciones…" else "${bills.size} gastos · ${formatMoney(bills.sumOf { it.amount }, currency)}", section == "bills", { if (!busy) section = if (section == "bills") null else "bills" }) {
+    Accordion("2. Gastos fijos", if (bills.isEmpty()) "Alquiler, luz, suscripciones…" else "${bills.size} gastos · ${formatMoney(bills.sumOf { it.amount }, currency)}", section == "bills", { if (!busy) section = if (section == "bills") null else "bills" }) {
         if (bills.isEmpty()) Text("Añade los pagos que se repiten cada periodo.", style = MaterialTheme.typography.bodyMedium)
         bills.forEach { bill ->
             ListItem(headlineContent = { Text(bill.name) }, supportingContent = { Text(formatMoney(bill.amount, currency)) }, trailingContent = { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = "Editar") },
@@ -238,15 +238,27 @@ internal val LocalFormSaveError = compositionLocalOf<String?> { null }
         }
         OutlinedButton(enabled = !busy, onClick = { if (!busy) { editingBill = null; billEditor = true } }, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) { Text("Añadir gasto fijo") }
     }
-    Accordion("Meta de ahorro", if (automatic) "Calculada con tu presupuesto" else "Elegida por ti", section == "target", { if (!busy) section = if (section == "target") null else "target" }) {
-        Field("Para gastos del día a día ($currency)", variable, { if (!busy) variable = it }, true)
-        Text("Reserva para comida, transporte, ocio y otros gastos variables.", style = MaterialTheme.typography.bodySmall)
+    Accordion("3. Gastos del día a día", "Comida, transporte y ocio", section == "daily", { if (!busy) section = if (section == "daily") null else "daily" }) {
+        Field("¿Cuánto necesitas por periodo? ($currency)", variable, { if (!busy) variable = it }, true)
+        Text("Es tu presupuesto para gastos que cambian. Al registrar una compra verás cuánto te queda; no la añadas también como gasto fijo.", style = MaterialTheme.typography.bodySmall)
+    }
+    Accordion("4. Ahorro por periodo", if (automatic) "Calculada con tu presupuesto" else "Elegida por ti", section == "target", { if (!busy) section = if (section == "target") null else "target" }) {
         Row(Modifier.fillMaxWidth().heightIn(min = 48.dp).toggleable(value = automatic, enabled = !busy, role = Role.Switch, onValueChange = { if (!busy) automatic = it }), verticalAlignment = Alignment.CenterVertically) {
-            Text("Calcular mi meta", Modifier.weight(1f))
+            Text("Reservar lo que queda tras los gastos", Modifier.weight(1f))
             Switch(checked = automatic, onCheckedChange = null, enabled = !busy)
         }
-        if (!automatic) Field("¿Cuánto quieres ahorrar? ($currency)", target, { if (!busy) target = it }, true)
-        Text(if (automatic) "Tu meta será lo que quede del ingreso tras reservar los fijos y los gastos del día a día." else "Mantendremos tu meta aunque supere el dinero disponible.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        if (!automatic) Field("¿Cuánto quieres reservar por periodo? ($currency)", target, { if (!busy) target = it }, true)
+        Text(if (automatic) "Calculamos tu reserva con lo que queda después de los gastos previstos." else "Esta reserva se descuenta del disponible para gastar. Puedes repartirla entre tus objetivos.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    }
+    val parsedSalary = parseMoney(salary)
+    val parsedVariable = parseMoney(variable)
+    val parsedTarget = if (automatic) 0L else parseMoney(target)
+    if (parsedSalary != null && parsedVariable != null && parsedTarget != null) {
+        val capacity = parsedSalary - bills.sumOf { it.amount } - parsedVariable
+        val reserve = if (automatic) capacity.coerceAtLeast(0) else parsedTarget
+        BudgetBreakdown(parsedSalary, bills.sumOf { it.amount }, parsedVariable, reserve, currency)
+        if (capacity < 0) Text("Los gastos previstos superan tus ingresos en ${formatMoney(-capacity, currency)}.", color = MaterialTheme.colorScheme.error)
+        else if (reserve > capacity) Text("Quieres reservar ${formatMoney(reserve - capacity, currency)} más de lo que queda tras tus gastos.", color = MaterialTheme.colorScheme.error)
     }
     Accordion("Copias de seguridad", "Guardar o recuperar tus datos", section == "backup", { if (!busy) section = if (section == "backup") null else "backup" }) {
         Text("Las copias no están cifradas: guárdalas en un lugar seguro. Importar reemplaza todos los datos.", style = MaterialTheme.typography.bodyMedium)
