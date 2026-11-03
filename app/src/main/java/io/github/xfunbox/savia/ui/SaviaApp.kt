@@ -143,7 +143,7 @@ fun SaviaApp() {
         onPrimary = Color(0xFF152000), error = Color(0xFFFFB4AB)
     ), shapes = Shapes(small = RoundedCornerShape(12.dp), medium = RoundedCornerShape(20.dp), large = RoundedCornerShape(28.dp))) {
         Scaffold(snackbarHost = { SnackbarHost(snackbar) },
-            topBar = { TopAppBar(title = { Text(when(page) { 1 -> "Movimientos"; 2 -> "Tu meta"; 3 -> "Resumen"; 4 -> "Ajustes"; else -> "Ahorro" }, fontWeight = FontWeight.Bold) },
+            topBar = { TopAppBar(title = { Text(when(page) { 1 -> "Movimientos"; 2 -> "Tu meta"; 3 -> "Resumen"; 4 -> "Ajustes"; else -> "Savia" }, fontWeight = FontWeight.Bold) },
                 navigationIcon = { if (page == 2 || page == 4) IconButton(onClick = { page = 0 }) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Volver al inicio") } },
                 actions = { if (page != 4 && data != null) IconButton(onClick = { page = 4 }) { Icon(Icons.Default.Settings, "Ajustes") } }) },
             floatingActionButton = {

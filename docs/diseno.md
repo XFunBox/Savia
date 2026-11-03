@@ -1,6 +1,6 @@
-# Ahorro — primera versión Android
+# Savia — primera versión Android
 
-Aplicación para cualquier persona, sin cuenta ni servidor. Registra ingresos, gastos fijos y movimientos, propone o acepta una meta y resume cada ciclo de cobro a cobro. Publicación del código en GitHub prevista; nombre provisional Ahorro.
+Aplicación para cualquier persona, sin cuenta ni servidor. Registra ingresos, gastos fijos y movimientos, propone o acepta una meta y resume cada ciclo de cobro a cobro.
 
 ## Decisiones de implementación
 

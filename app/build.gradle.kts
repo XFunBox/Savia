@@ -10,8 +10,8 @@ android {
         applicationId = "io.github.xfunbox.savia"
         minSdk = 31
         targetSdk = 36
-        versionCode = 3
-        versionName = "1.0.0"
+        versionCode = 4
+        versionName = "2.0.0"
     }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
@@ -22,7 +22,7 @@ android {
         release {
             isMinifyEnabled = true
             isShrinkResources = true
-            // Conservar el certificado ya instalado para las actualizaciones por GitHub.
+            // Conservar el certificado de Savia para sus futuras actualizaciones.
             signingConfig = signingConfigs.getByName("debug")
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"))
         }

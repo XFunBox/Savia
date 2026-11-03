@@ -1,5 +1,10 @@
 # Cambios
 
+## 2.0.0
+
+- Nueva marca Savia e identificador Android independiente; no actualiza Ahorro 1.0.
+- Los datos se pueden trasladar exportando e importando una copia JSON.
+
 ## 1.0.0
 
 - Búsqueda de movimientos por categoría, nota o importe dentro del periodo.
