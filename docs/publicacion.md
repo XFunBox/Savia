@@ -1,34 +1,28 @@
 # Firma y publicación
 
-## Recuperar y conservar la clave original
+## Clave definitiva y transición desde las pruebas
 
-La APK publicada de Savia 2.0.0 utiliza un certificado Android Debug concreto.
-Su huella pública SHA-256 es:
+La APK de pruebas Savia 2.0.0 utilizaba una clave Android Debug de otro equipo.
+Se ha aprobado sustituirla por una clave de publicación propia, puesto que solo
+se distribuyó a testers. Su certificado público SHA-256 está fijado en
+`scripts/certificado-release.sha256`:
 
 ```text
-020af9637260439e2781cacedd5b3c2dcdca578f8a99eb7a2684c19d82a82941
+689a854dd9e2f2a8c862da8a4c678ca31e4c63c5a3bcc3db04fcb2ac64dccc83
 ```
 
-Necesitamos el archivo de claves del equipo que compiló esa APK. Si se utilizó
-la configuración predeterminada, estará en `~/.android/debug.keystore` (Linux)
-o `%USERPROFILE%\.android\debug.keystore` (Windows). El nombre y el certificado
-Android Debug no bastan: otra instalación tendrá otra clave. El certificado
-público de una APK no permite recuperar su clave privada.
+La clave privada se conserva fuera del repositorio y en secretos de GitHub.
+Mantén una copia privada del almacén y sus credenciales en un lugar seguro.
+No regeneres la clave para cada versión ni subas secretos a Git.
 
-Comprueba el archivo candidato sin compartirlo ni mostrar sus contraseñas:
-
-```bash
-keytool -list -v -keystore /ruta/privada/debug.keystore
-```
-
-La huella SHA-256 debe coincidir con la anterior (ignorando los separadores `:`).
-Conserva una copia privada del archivo y sus credenciales en un lugar seguro,
-además de los secretos de GitHub. No regeneres el archivo original, no lo subas
-a Git y no cambies la huella del verificador para aceptar otra clave.
-
-**Pendiente al preparar este cambio:** recuperar esa clave y configurar los
-secretos. Hasta entonces, la publicación debe fallar. Una nueva clave no permite
-actualizar la Savia instalada conservando su identidad y sus datos.
+**Transición única:** la nueva firma no permite actualizar directamente la APK
+2.0.0. Los testers deben exportar sus datos en JSON y guardar la copia fuera de
+la aplicación, desinstalar la versión antigua, instalar la nueva e importar la
+copia. No desinstalar antes de comprobar que la copia está disponible. Las
+versiones posteriores conservarán esta nueva firma para admitir actualizaciones.
+La APK histórica usa la huella
+`020af9637260439e2781cacedd5b3c2dcdca578f8a99eb7a2684c19d82a82941`;
+el verificador la rechaza de forma intencionada.
 
 ## Compilar una APK de publicación
 
@@ -37,9 +31,9 @@ en el repositorio ni introducir contraseñas en el historial:
 
 | Variable | Contenido |
 | --- | --- |
-| `SAVIA_KEYSTORE_FILE` | Ruta absoluta al archivo original |
+| `SAVIA_KEYSTORE_FILE` | Ruta absoluta al almacén de publicación |
 | `SAVIA_STORE_PASSWORD` | Contraseña del almacén |
-| `SAVIA_KEY_ALIAS` | Alias que contiene la clave original |
+| `SAVIA_KEY_ALIAS` | Alias que contiene la clave de publicación |
 | `SAVIA_KEY_PASSWORD` | Contraseña de esa clave |
 
 ```bash
@@ -61,9 +55,9 @@ En **Settings → Secrets and variables → Actions**, crea:
 
 | Secreto | Contenido |
 | --- | --- |
-| `SAVIA_KEYSTORE_BASE64` | Archivo original codificado en base64 |
+| `SAVIA_KEYSTORE_BASE64` | Almacén de publicación codificado en base64 |
 | `SAVIA_STORE_PASSWORD` | Contraseña del almacén |
-| `SAVIA_KEY_ALIAS` | Alias original |
+| `SAVIA_KEY_ALIAS` | Alias de publicación |
 | `SAVIA_KEY_PASSWORD` | Contraseña de la clave |
 
 Con GitHub CLI autenticado, desde este repositorio y con las variables locales
@@ -103,7 +97,8 @@ Para comprobar los rechazos del verificador sin una clave privada:
 bash scripts/probar-verificacion.sh
 ```
 
-Antes de distribuir la primera actualización, instálala sobre Savia 2.0.0 en
-un dispositivo de prueba con datos ficticios y comprueba que se conservan.
-La firma compatible es necesaria; esa prueba también confirma el comportamiento
-real de la actualización.
+Antes de distribuir la primera versión con la nueva firma, comprueba la
+exportación desde 2.0.0 e importación en la nueva instalación con datos ficticios.
+Después comprueba que una segunda APK firmada con la misma clave se instala
+como actualización y conserva los datos. Estas pruebas en dispositivo siguen
+pendientes hasta disponer de las APK y de un dispositivo de prueba.

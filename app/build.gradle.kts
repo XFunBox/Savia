@@ -37,7 +37,7 @@ android {
         release {
             isMinifyEnabled = true
             isShrinkResources = true
-            // Sin la clave original se genera una APK sin firmar, nunca con otra clave debug.
+            // Sin la clave de publicación se genera una APK sin firmar, nunca con otra clave debug.
             signingConfig = signingConfigs.findByName("saviaRelease")
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"))
         }

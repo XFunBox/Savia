@@ -50,7 +50,7 @@ Requisitos: JDK 17 y Android SDK con plataforma 36 y Build Tools 36.0.0. Configu
 ```
 
 La APK de desarrollo se genera en `app/build/outputs/apk/debug/app-debug.apk`.
-Para generar una actualización instalable sobre Savia 2.0.0, sigue [Firma y publicación](docs/publicacion.md).
+Para generar versiones con la firma definitiva, sigue [Firma y publicación](docs/publicacion.md). El cambio desde la APK de pruebas 2.0.0 requiere exportar los datos y reinstalar una vez.
 El material de firma no se incluye en el repositorio.
 
 ## Documentación
