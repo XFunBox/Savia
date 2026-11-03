@@ -68,7 +68,7 @@ internal fun Screens(data: AppData, page: Int, today: LocalDate, busy: Boolean,
                             Text(if (data.settings.salary == 0L) "Empieza por tu ingreso y tus gastos habituales. Después verás cuánto puedes gastar y reservar."
                                 else "Ya tienes tu plan. Confirma el ingreso recibido para empezar tu primer periodo.")
                             Button(enabled = !busy, onClick = { if (data.settings.salary == 0L) onSettings() else dialog = "cycle" }) {
-                                Text(if (data.settings.salary == 0L) "Preparar mi plan" else "Empezar mi periodo")
+                                Text(if (data.settings.salary == 0L) "Preparar mi presupuesto" else "Empezar mi periodo")
                             }
                         }
                     }
@@ -85,7 +85,7 @@ internal fun Screens(data: AppData, page: Int, today: LocalDate, busy: Boolean,
                             }
                             Text(formatMoney(summary.available, cycle.currency), style = MaterialTheme.typography.displaySmall, fontWeight = FontWeight.Bold,
                                 color = if (summary.available < 0) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onPrimaryContainer)
-                            Text("Con tus fijos y tu meta ya reservados", style = MaterialTheme.typography.bodySmall)
+                            Text("Tras descontar gastos pagados, fijos pendientes y ahorro reservado", style = MaterialTheme.typography.bodySmall)
                             HorizontalDivider(color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = .18f))
                             Text(if (remaining > 0) "${formatMoney(summary.available / remaining, cycle.currency)} al día · estimación para $remaining días" else "Este periodo ha terminado",
                                 style = MaterialTheme.typography.bodyMedium)
@@ -93,15 +93,19 @@ internal fun Screens(data: AppData, page: Int, today: LocalDate, busy: Boolean,
                         }
                     }
                     BudgetCard(summary.variableSpent, cycle.variableBudget, cycle.currency)
+                    Amount("Ahorro previsto al terminar", summary.forecast, cycle.currency)
+                    Text("Estimación tras tus gastos previstos; aún no es dinero ahorrado.", style = MaterialTheme.typography.bodySmall)
+                    if (cycle.target > summary.forecast) Text("Tu reserva supera el ahorro previsto en ${formatMoney(cycle.target - summary.forecast, cycle.currency)}. Revisa los gastos o ajusta la reserva.", color = MaterialTheme.colorScheme.error)
+                    OutlinedButton(enabled = !busy, onClick = { dialog = "target" }) { Text("Cambiar ahorro reservado") }
                     Card(onClick = onPlan, shape = RoundedCornerShape(24.dp), modifier = Modifier.fillMaxWidth()) {
                         Row(Modifier.padding(20.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
                             Icon(Icons.Default.Savings, null, tint = MaterialTheme.colorScheme.secondary, modifier = Modifier.size(30.dp))
                             Column(Modifier.weight(1f)) {
-                                Text("Tu meta", style = MaterialTheme.typography.labelLarge)
+                                Text("Ahorro reservado este periodo", style = MaterialTheme.typography.labelLarge)
                                 Text(formatMoney(cycle.target, cycle.currency), style = MaterialTheme.typography.headlineSmall)
-                                Text("Ver plan y previsión", style = MaterialTheme.typography.bodySmall)
+                                Text("Repartir entre mis objetivos", style = MaterialTheme.typography.bodySmall)
                             }
-                            Icon(Icons.Default.ChevronRight, "Ver plan")
+                            Icon(Icons.Default.ChevronRight, "Ver objetivos")
                         }
                     }
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
@@ -163,44 +167,8 @@ internal fun Screens(data: AppData, page: Int, today: LocalDate, busy: Boolean,
                     }
                 }
             }
-            2 -> {
-                if (cycle != null) {
-                    CycleLabel(cycle)
-                    val summary = summarize(cycle, data.movements)
-                    Card(shape = RoundedCornerShape(28.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer)) {
-                        Column(Modifier.fillMaxWidth().padding(24.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                            Icon(Icons.Default.Flag, null, tint = MaterialTheme.colorScheme.onSecondaryContainer)
-                            Amount("Tu meta de este periodo", cycle.target, cycle.currency)
-                            Text("Es lo que quieres reservar.", style = MaterialTheme.typography.bodyMedium)
-                            OutlinedButton(enabled = !busy, onClick = { dialog = "target" }) { Text("Cambiar meta") }
-                        }
-                    }
-                    Card(shape = RoundedCornerShape(24.dp)) {
-                        Column(Modifier.fillMaxWidth().padding(20.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                            Amount("Previsión al terminar", summary.forecast, cycle.currency)
-                            Text("Estimación según tus ingresos, fijos y gastos variables. El dinero aún no está ahorrado.", style = MaterialTheme.typography.bodyMedium)
-                            val capacity = (cycle.income - cycle.bills.sumOf { it.amount } - cycle.variableBudget).coerceAtLeast(0)
-                            if (cycle.target > capacity) Text("Tu meta supera lo previsto en ${formatMoney(cycle.target - capacity, cycle.currency)}.", color = MaterialTheme.colorScheme.secondary)
-                        }
-                    }
-                }
-                var expanded by remember { mutableStateOf(false) }
-                Card(shape = RoundedCornerShape(24.dp)) {
-                    Column(Modifier.fillMaxWidth().padding(20.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                        Amount("Meta sugerida para el próximo periodo", suggestedTarget(data.settings), data.settings.currency)
-                        TextButton(onClick = { expanded = !expanded }) { Text(if (expanded) "Ocultar cálculo" else "¿Cómo se calcula?"); Icon(if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore, null) }
-                        if (expanded) {
-                            Text("Ingreso − gastos fijos − presupuesto variable. Si queda menos de cero, la sugerencia es cero.")
-                            MoneyLine("Ingreso", data.settings.salary, data.settings.currency)
-                            MoneyLine("Fijos", data.settings.fixedExpenses.sumOf { it.amount }, data.settings.currency)
-                            MoneyLine("Presupuesto variable", data.settings.variableBudget, data.settings.currency)
-                            Text("La previsión del periodo usa el mayor entre el presupuesto variable y el gasto variable registrado.", style = MaterialTheme.typography.bodySmall)
-                        }
-                    }
-                }
-                Text("Los cambios en Ajustes se aplican al próximo periodo.", style = MaterialTheme.typography.bodySmall)
-            }
-            3 -> History(data)
+            2 -> GoalsScreen(data, cycle, busy, save)
+            3 -> History(data, busy, save)
             4 -> SettingsScreen(data.settings, busy, onSave = { change(data.copy(settings = it)) }, onExport = onExport, onImport = onImport)
         }
         Spacer(Modifier.height(88.dp))
@@ -213,7 +181,7 @@ internal fun Screens(data: AppData, page: Int, today: LocalDate, busy: Boolean,
         val next = data.copy(movements = data.movements.filterNot { it.id == movement.id } + movement)
         validateData(next); pendingDialogSave = next; save(next)
     }
-    if (dialog == "target" && cycle != null) MoneyForm("Tu meta", cycle.target, cycle.currency, { dialog = null; pendingDialogSave = null }) { amount ->
+    if (dialog == "target" && cycle != null) MoneyForm("Ahorro reservado en este periodo", cycle.target, cycle.currency, { dialog = null; pendingDialogSave = null }) { amount ->
         val next = data.copy(cycles = data.cycles.map { if (it.id == cycle.id) it.copy(target = amount) else it })
         validateData(next); pendingDialogSave = next; save(next)
     }
@@ -223,7 +191,23 @@ internal fun Screens(data: AppData, page: Int, today: LocalDate, busy: Boolean,
         dismissButton = { TextButton(onClick = { delete = null }) { Text("Cancelar") } }) }
 }
 
-@Composable private fun History(data: AppData) {
+@Composable private fun History(data: AppData, busy: Boolean, save: (AppData) -> Unit) {
+    var deleting by remember { mutableStateOf<Cycle?>(null) }
+    var pending by remember { mutableStateOf<AppData?>(null) }
+    LaunchedEffect(data, pending) {
+        if (pending != null && data == pending) { deleting = null; pending = null }
+    }
+    deleting?.let { item ->
+        AlertDialog(onDismissRequest = { if (!busy) { deleting = null; pending = null } },
+            title = { Text("¿Borrar este periodo?") },
+            text = { Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text("${item.start.readable()} – ${item.end.minusDays(1).readable()} · ${item.start.year}")
+                Text("Se eliminarán el periodo y sus ${data.movements.count { it.cycleId == item.id }} movimientos. Tu presupuesto y tus objetivos se conservarán. Esta acción no se puede deshacer.")
+                LocalFormSaveError.current?.let { Text(it, color = MaterialTheme.colorScheme.error) }
+            } },
+            confirmButton = { TextButton(enabled = !busy, onClick = { val next = deleteCycle(data, item.id); pending = next; save(next) }) { Text(if (busy) "Borrando…" else "Borrar periodo") } },
+            dismissButton = { TextButton(enabled = !busy, onClick = { deleting = null; pending = null }) { Text("Cancelar") } })
+    }
     var selected by remember { mutableStateOf<String?>(null) }
     var historyPage by remember { mutableIntStateOf(0) }
     var expanded by remember { mutableStateOf(false) }
@@ -276,6 +260,11 @@ internal fun Screens(data: AppData, page: Int, today: LocalDate, busy: Boolean,
         }
     }
     Pages(currentCategoryPage, categories.size) { categoryPage = it }
+    TextButton(enabled = !busy, onClick = { deleting = cycle }) {
+        Icon(Icons.Default.DeleteOutline, null)
+        Spacer(Modifier.width(8.dp))
+        Text("Borrar este periodo", color = MaterialTheme.colorScheme.error)
+    }
 }
 
 @Composable private fun BudgetCard(spent: Long, budget: Long, currency: String) {
@@ -286,7 +275,7 @@ internal fun Screens(data: AppData, page: Int, today: LocalDate, busy: Boolean,
             LinearProgressIndicator(progress = { if (budget == 0L) { if (spent > 0L) 1f else 0f } else (spent.toFloat() / budget).coerceIn(0f, 1f) },
                 modifier = Modifier.fillMaxWidth().height(10.dp).semantics { contentDescription = "Presupuesto variable: gastados ${formatMoney(spent, currency)} de ${formatMoney(budget, currency)}" },
                 color = if (spent > budget) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary)
-            Text(if (spent > budget) "Has superado el presupuesto en ${formatMoney(spent - budget, currency)}" else "Quedan ${formatMoney(budget - spent, currency)} de tu presupuesto variable",
+            Text(if (spent > budget) "Has superado el presupuesto en ${formatMoney(spent - budget, currency)}" else "Quedan ${formatMoney(budget - spent, currency)} para gastos del día a día",
                 style = MaterialTheme.typography.bodySmall, color = if (spent > budget) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
@@ -334,7 +323,7 @@ private fun categoryIcon(category: String): ImageVector = when (category.lowerca
         Text(text, style = MaterialTheme.typography.bodyLarge)
     }
 }
-@Composable private fun MoneyLine(label: String, amount: Long, currency: String, icon: ImageVector? = null) {
+@Composable internal fun MoneyLine(label: String, amount: Long, currency: String, icon: ImageVector? = null) {
     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         icon?.let { Icon(it, null, Modifier.size(20.dp), tint = MaterialTheme.colorScheme.secondary) }
         Text(label, Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium)

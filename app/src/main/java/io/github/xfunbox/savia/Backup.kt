@@ -32,8 +32,14 @@ object Backup {
                     .put("note", it.note).put("billId", it.billId ?: JSONObject.NULL))
             }
         }
-        val result = JSONObject().put("version", 1).put("settings", settings)
-            .put("cycles", cycles).put("movements", movements).toString()
+        val goals = JSONArray().apply {
+            data.goals.forEach {
+                put(JSONObject().put("id", it.id).put("name", it.name).put("targetAmount", it.targetAmount)
+                    .put("savedAmount", it.savedAmount).put("periodAmount", it.periodAmount).put("currency", it.currency))
+            }
+        }
+        val result = JSONObject().put("version", 2).put("settings", settings)
+            .put("cycles", cycles).put("movements", movements).put("goals", goals).toString()
         checkSize(result)
         return result
     }
@@ -45,7 +51,8 @@ object Backup {
             val root = tokener.nextValue() as? JSONObject
                 ?: throw IllegalArgumentException("La copia debe contener un objeto JSON.")
             require(tokener.nextClean() == '\u0000') { "Hay contenido adicional después de la copia." }
-            require(root.number("version") == 1L) { "Versión de copia no admitida." }
+            val version = root.number("version")
+            require(version in 1L..2L) { "Versión de copia no admitida." }
             val s = root.getJSONObject("settings")
             val settings = Settings(s.number("salary"), s.number("payday").also {
                 require(it in 1..31) { "El día de cobro debe estar entre 1 y 31." }
@@ -62,7 +69,11 @@ object Backup {
                     it.number("amount"), it.boolean("income"), it.string("category"), it.string("note"),
                     if (it.isNull("billId")) null else it.string("billId"))
             }
-            return AppData(settings, cycles, movements).also(::validateData)
+            val goals = if (version == 1L) emptyList() else root.getJSONArray("goals").objects(100).map {
+                SavingsGoal(it.string("id"), it.string("name"), it.number("targetAmount"),
+                    it.number("savedAmount"), it.number("periodAmount"), it.string("currency"))
+            }
+            return AppData(settings, cycles, movements, goals).also(::validateData)
         } catch (e: IllegalArgumentException) {
             throw e
         } catch (e: Exception) {

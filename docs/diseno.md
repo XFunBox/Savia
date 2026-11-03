@@ -30,3 +30,11 @@ Pruebas de dinero, fechas cortas/bisiestos, presupuesto negativo, pagos fijos si
 - https://developer.android.com/develop/ui/compose/setup
 - https://developer.android.com/build/releases/agp-8-9-0-release-notes
 - Context7, documentación oficial de Compose, consultada durante la implementación.
+
+## Actualización: objetivos y presupuesto
+
+Un presupuesto común y hasta 100 objetivos independientes, con nombre, moneda, cantidad total, ahorro registrado manualmente y aportación prevista por periodo. Las aportaciones reparten la reserva existente: no generan movimientos ni descuentan dos veces el disponible. El progreso no se incrementa automáticamente con una previsión. Cada objetivo conserva su moneda al editarse.
+
+Mi presupuesto separa ingresos, gastos fijos, gastos del día a día y ahorro reservado. Muestra el reparto y avisa si los gastos o la reserva exceden la capacidad prevista. Inicio distingue disponible, reserva y previsión; Objetivos está en la navegación principal.
+
+Resumen permite borrar un periodo y exclusivamente sus movimientos, previa confirmación con fechas y número de movimientos. Presupuesto y objetivos se conservan. Las copias pasan a versión 2 e incluyen objetivos; versión 1 sigue admitida y se importa con objetivos vacíos, conservando todos sus datos originales.
