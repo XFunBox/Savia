@@ -8,12 +8,12 @@ Proyecto de una aplicación Android para organizar gastos y ahorrar, sin cuenta 
 
 [Descarga alternativa de la APK](https://github.com/XFunBox/ahorro-app/releases/latest)
 
-1. Abre este repositorio en el navegador del móvil con tu sesión de GitHub iniciada: es privado.
-2. Pulsa el enlace de descarga. Si GitHub muestra la página del archivo, pulsa **Download raw file** o **View raw**.
+1. Abre la página de [Releases](https://github.com/XFunBox/ahorro-app/releases/tag/v1.0.0) o descarga la APK directamente con el enlace alternativo.
+2. Si GitHub muestra la página del archivo, pulsa **Download raw file** o **View raw**.
 3. Abre la APK descargada y, si Android lo solicita, permite instalar aplicaciones desde ese navegador o gestor de archivos.
 4. Instala y abre **Ahorro**. Empieza por **Ajustes**, guarda tu configuración y abre el primer ciclo desde **Inicio**.
 
-Requiere **Android 12 o posterior**. APK optimizada con el certificado de las versiones anteriores. Instalación y flujo básico comprobados en un emulador de Android 12; pendiente la valoración en teléfonos reales. Puedes actualizar sobre la 0.1.0 sin desinstalar: la firma y el formato de datos se conservan.
+Requiere **Android 12 o posterior**. APK optimizada con el certificado de las versiones anteriores. Instalación y flujo básico comprobados en un emulador de Android 12; pendiente la valoración en teléfonos reales. Puedes actualizar desde una versión anterior sin desinstalar: la firma y el formato de datos se conservan.
 
 La carpeta [descargas](descargas) incluye la APK y su checksum SHA-256. El código y las instrucciones de compilación también están en este repositorio.
 
@@ -38,21 +38,18 @@ Capturas reales de Android 12 con datos ficticios: [Inicio](docs/capturas/inicio
 - Resúmenes por periodo y categorías.
 - Funcionamiento local y copias de seguridad manuales.
 
-## Documentación
-
-- [Nota original del proyecto en Obsidian](docs/diseno.md).
-- [Diseño de la primera versión](docs/diseno.md).
-- [Plan de implementación](docs/plan.md).
-
 ## Estado
 
-Repositorio privado por decisión del propietario. Versión 1.0.0 con tres secciones principales: Inicio, Movimientos y Resumen. La meta se abre desde Inicio y los ajustes desde la cabecera.
+Versión 1.0.0 con tres secciones principales: Inicio, Movimientos y Resumen. La meta se abre desde Inicio y los ajustes desde la cabecera.
 
-Enfoque técnico inicial: Kotlin y Jetpack Compose. Nombre provisional: Ahorro.
+La aplicación está escrita en Kotlin y Jetpack Compose. La versión publicada requiere Android 12 o posterior.
 
-La nota de Obsidian es una copia puntual; no hay sincronización automática con la bóveda. Sus enlaces `[[wikilinks]]` pertenecen al vault personal y no están incluidos en este repositorio.
+## Documentación
 
-## Compilar y comprobar
+- [Diseño y alcance](docs/diseno.md).
+- [Cambios de la versión 1.0.0](docs/notas-version-1.0.md).
+
+## Compilar
 
 Requisitos: JDK 17 y Android SDK con plataforma 36 y Build Tools 36.0.0. Configurar ANDROID_HOME o sdk.dir en local.properties (archivo excluido de Git). Android Studio también puede abrir esta carpeta y resolver la configuración.
 
@@ -61,6 +58,10 @@ Requisitos: JDK 17 y Android SDK con plataforma 36 y Build Tools 36.0.0. Configu
 ```
 
 La APK optimizada se genera en app/build/outputs/apk/release/app-release.apk. Conserva el certificado usado en las versiones anteriores distribuidas por GitHub. El material de firma no se incluye en el repositorio.
+
+## Licencia
+
+Este repositorio no incluye una licencia de código. Hacerlo público permite consultar el contenido, pero no concede automáticamente permiso para reutilizarlo, modificarlo o redistribuirlo.
 
 ## Cómo probar
 
