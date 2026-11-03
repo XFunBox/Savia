@@ -120,7 +120,7 @@ internal val LocalFormSaveError = compositionLocalOf<String?> { null }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
-@Composable internal fun MovementForm(cycle: Cycle, today: LocalDate, previous: Movement?, onDismiss: () -> Unit, onSave: (Movement) -> Unit) {
+@Composable internal fun MovementForm(cycle: Cycle, today: LocalDate, previous: Movement?, onDismiss: () -> Unit, isCopy: Boolean = false, onSave: (Movement) -> Unit) {
     val busy = LocalFormBusy.current
     val currentBusy by rememberUpdatedState(busy)
     val categories = listOf("Comida", "Transporte", "Casa", "Ocio", "Salud", "Compras", "Otros")
@@ -139,7 +139,7 @@ internal val LocalFormSaveError = compositionLocalOf<String?> { null }
         Column(Modifier.fillMaxWidth().fillMaxHeight(.95f).imePadding().padding(horizontal = 24.dp).padding(bottom = 16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
             Column(Modifier.weight(1f).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(16.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(if (previous == null) "¿Cuánto ${if (income) "has recibido" else "has gastado"}?" else "Editar ${if (income) "ingreso" else "gasto"}", modifier = Modifier.weight(1f), style = MaterialTheme.typography.headlineSmall)
+                Text(if (isCopy) "Repetir gasto" else if (previous == null) "¿Cuánto ${if (income) "has recibido" else "has gastado"}?" else "Editar ${if (income) "ingreso" else "gasto"}", modifier = Modifier.weight(1f), style = MaterialTheme.typography.headlineSmall)
                 IconButton(enabled = !busy, onClick = { if (!busy) onDismiss() }) { Icon(Icons.Default.Close, contentDescription = "Cerrar sin guardar") }
             }
             OutlinedTextField(value = amount, enabled = !busy, onValueChange = { if (!busy) amount = it }, modifier = Modifier.fillMaxWidth().focusRequester(focus),

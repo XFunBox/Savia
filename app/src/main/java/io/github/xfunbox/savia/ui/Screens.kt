@@ -36,9 +36,11 @@ internal fun Screens(data: AppData, page: Int, today: LocalDate, busy: Boolean,
     addRequest: Int = 0, onPlan: () -> Unit = {}) {
     val cycle = data.cycles.maxByOrNull { it.start }
     var movementPage by remember(cycle?.id) { mutableIntStateOf(0) }
+    var movementQuery by remember(cycle?.id) { mutableStateOf("") }
     var dialog by remember { mutableStateOf<String?>(null) }
     var pendingDialogSave by remember { mutableStateOf<AppData?>(null) }
     var edit by remember { mutableStateOf<Movement?>(null) }
+    var repeating by remember { mutableStateOf(false) }
     var delete by remember { mutableStateOf<Movement?>(null) }
     var failure by remember { mutableStateOf<String?>(null) }
     fun change(next: AppData) {
@@ -46,7 +48,7 @@ internal fun Screens(data: AppData, page: Int, today: LocalDate, busy: Boolean,
         catch (e: Exception) { failure = e.message ?: "Revisa los datos." }
     }
     LaunchedEffect(addRequest) {
-        if (addRequest > 0 && cycle != null) { edit = null; dialog = "movement" }
+        if (addRequest > 0 && cycle != null) { edit = null; repeating = false; dialog = "movement" }
     }
     LaunchedEffect(data, pendingDialogSave) {
         if (pendingDialogSave != null && data == pendingDialogSave) {
@@ -134,16 +136,30 @@ internal fun Screens(data: AppData, page: Int, today: LocalDate, busy: Boolean,
                 else {
                     CycleLabel(cycle)
                     val movements = remember(data.movements, cycle.id) { data.movements.filter { it.cycleId == cycle.id }.sortedByDescending { it.date } }
-                    val currentPage = movementPage.coerceIn(0, lastPage(movements.size))
+                    val filtered = remember(movements, movementQuery) { filterMovements(movements, movementQuery) }
+                    val currentPage = movementPage.coerceIn(0, lastPage(filtered.size))
+                    OutlinedTextField(value = movementQuery, onValueChange = { movementQuery = it; movementPage = 0 },
+                        label = { Text("Buscar en este periodo") }, placeholder = { Text("Categoría, nota o importe") },
+                        leadingIcon = { Icon(Icons.Default.Search, null) },
+                        trailingIcon = { if (movementQuery.isNotEmpty()) IconButton(onClick = { movementQuery = ""; movementPage = 0 }) { Icon(Icons.Default.Close, "Limpiar búsqueda") } },
+                        singleLine = true, modifier = Modifier.fillMaxWidth())
                     if (movements.isEmpty()) EmptyMessage(Icons.Default.AddCircleOutline, "Todo empieza aquí", "Pulsa + para anotar tu primer gasto o ingreso.")
                     else {
-                        Text("${movements.size} movimientos", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(if (movementQuery.isBlank()) "${movements.size} movimientos" else "${filtered.size} de ${movements.size} movimientos", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        if (filtered.isEmpty()) Text("No hay movimientos que coincidan. Prueba otra categoría, nota o importe.")
                         Column {
-                            movements.drop(currentPage * PAGE_SIZE).take(PAGE_SIZE).forEach { movement ->
-                                MovementRow(movement, cycle.currency, busy, { edit = movement; dialog = "movement" }, { delete = movement })
+                            filtered.drop(currentPage * PAGE_SIZE).take(PAGE_SIZE).forEach { movement ->
+                                key(movement.id) {
+                                    MovementRow(movement, cycle.currency, busy,
+                                        onEdit = { edit = movement; repeating = false; dialog = "movement" },
+                                        onDelete = { delete = movement },
+                                        onRepeat = if (!movement.income && movement.billId == null && today >= cycle.start && today < cycle.end) {
+                                            { edit = repeatExpense(movement, cycle, today); repeating = true; dialog = "movement" }
+                                        } else null)
+                                }
                             }
                         }
-                        Pages(currentPage, movements.size) { movementPage = it }
+                        Pages(currentPage, filtered.size) { movementPage = it }
                     }
                 }
             }
@@ -193,7 +209,7 @@ internal fun Screens(data: AppData, page: Int, today: LocalDate, busy: Boolean,
         val next = data.copy(cycles = data.cycles + newCycle(data.settings, start, end, income))
         validateData(next); pendingDialogSave = next; save(next)
     }
-    if (dialog == "movement" && cycle != null) MovementForm(cycle, today, edit, onDismiss = { dialog = null; pendingDialogSave = null }) { movement ->
+    if (dialog == "movement" && cycle != null) MovementForm(cycle, today, edit, isCopy = repeating, onDismiss = { dialog = null; pendingDialogSave = null }) { movement ->
         val next = data.copy(movements = data.movements.filterNot { it.id == movement.id } + movement)
         validateData(next); pendingDialogSave = next; save(next)
     }
@@ -276,7 +292,7 @@ internal fun Screens(data: AppData, page: Int, today: LocalDate, busy: Boolean,
     }
 }
 
-@Composable private fun MovementRow(movement: Movement, currency: String, busy: Boolean, onEdit: () -> Unit, onDelete: () -> Unit) {
+@Composable private fun MovementRow(movement: Movement, currency: String, busy: Boolean, onEdit: () -> Unit, onDelete: () -> Unit, onRepeat: (() -> Unit)? = null) {
     var menu by remember { mutableStateOf(false) }
     Row(Modifier.fillMaxWidth().clickable(enabled = !busy && movement.billId == null, onClickLabel = "Editar movimiento", onClick = onEdit).padding(vertical = 12.dp), verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -293,6 +309,8 @@ internal fun Screens(data: AppData, page: Int, today: LocalDate, busy: Boolean,
         Box {
             IconButton(enabled = !busy, onClick = { menu = true }) { Icon(Icons.Default.MoreVert, "Opciones de ${movement.category}, ${formatMoney(movement.amount, currency)}") }
             DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
+                if (onRepeat != null) DropdownMenuItem(text = { Text("Repetir gasto") }, leadingIcon = { Icon(Icons.Default.Refresh, null) }, enabled = !busy,
+                    onClick = { menu = false; onRepeat() })
                 DropdownMenuItem(text = { Text(if (movement.billId == null) "Eliminar" else "Desmarcar pago") }, leadingIcon = { Icon(Icons.Default.DeleteOutline, null) }, onClick = { menu = false; onDelete() })
             }
         }

@@ -4,18 +4,26 @@ Proyecto de una aplicación Android para organizar gastos y ahorrar, sin cuenta 
 
 ## Descargar e instalar en Android
 
-**[Descargar Ahorro 0.2.0 para Android](https://github.com/XFunBox/ahorro-app/releases/latest)**
+**[Descargar Ahorro 1.0.0 desde Releases](https://github.com/XFunBox/ahorro-app/releases/tag/v1.0.0)**
+
+[Descarga alternativa de la APK](https://github.com/XFunBox/ahorro-app/releases/latest)
 
 1. Abre este repositorio en el navegador del móvil con tu sesión de GitHub iniciada: es privado.
 2. Pulsa el enlace de descarga. Si GitHub muestra la página del archivo, pulsa **Download raw file** o **View raw**.
 3. Abre la APK descargada y, si Android lo solicita, permite instalar aplicaciones desde ese navegador o gestor de archivos.
 4. Instala y abre **Ahorro**. Empieza por **Ajustes**, guarda tu configuración y abre el primer ciclo desde **Inicio**.
 
-Requiere **Android 12 o posterior**. Versión de pruebas, con firma de desarrollo. Instalación y flujo básico comprobados en un emulador de Android 12; pendiente la valoración en teléfonos reales. Puedes actualizar sobre la 0.1.0 sin desinstalar: la firma y el formato de datos se conservan.
+Requiere **Android 12 o posterior**. APK optimizada con el certificado de las versiones anteriores. Instalación y flujo básico comprobados en un emulador de Android 12; pendiente la valoración en teléfonos reales. Puedes actualizar sobre la 0.1.0 sin desinstalar: la firma y el formato de datos se conservan.
 
 La carpeta [descargas](descargas) incluye la APK y su checksum SHA-256. El código y las instrucciones de compilación también están en este repositorio.
 
-## Novedades de 0.2.0
+## Novedades de 1.0.0
+
+- Busca movimientos del periodo por categoría, nota o importe.
+- Repite un gasto variable desde su menú, revisando la copia antes de guardar.
+- APK optimizada de aproximadamente 2,8 MB.
+
+## Diseño introducido en 0.2.0
 
 Inicio con presupuesto diario orientativo, progreso del gasto y acceso a tu meta. Una acción destacada para añadir gastos; categorías con iconos y fechas en calendario. Ajustes agrupados y formulario con Guardar siempre visible encima del teclado.
 
@@ -38,7 +46,7 @@ Capturas reales de Android 12 con datos ficticios: [Inicio](docs/capturas/inicio
 
 ## Estado
 
-Repositorio privado por decisión del propietario. Versión 0.2.0 con tres secciones principales: Inicio, Movimientos y Resumen. La meta se abre desde Inicio y los ajustes desde la cabecera.
+Repositorio privado por decisión del propietario. Versión 1.0.0 con tres secciones principales: Inicio, Movimientos y Resumen. La meta se abre desde Inicio y los ajustes desde la cabecera.
 
 Enfoque técnico inicial: Kotlin y Jetpack Compose. Nombre provisional: Ahorro.
 
@@ -49,10 +57,10 @@ La nota de Obsidian es una copia puntual; no hay sincronización automática con
 Requisitos: JDK 17 y Android SDK con plataforma 36 y Build Tools 36.0.0. Configurar ANDROID_HOME o sdk.dir en local.properties (archivo excluido de Git). Android Studio también puede abrir esta carpeta y resolver la configuración.
 
 ```powershell
-.\gradlew.bat testDebugUnitTest assembleDebug lintDebug
+.\gradlew.bat testDebugUnitTest assembleRelease lintRelease
 ```
 
-La APK de desarrollo se genera en app/build/outputs/apk/debug/app-debug.apk. Está firmada para pruebas; la firma estable de distribución se preparará al publicar una versión para usuarios.
+La APK optimizada se genera en app/build/outputs/apk/release/app-release.apk. Conserva el certificado usado en las versiones anteriores distribuidas por GitHub. El material de firma no se incluye en el repositorio.
 
 ## Cómo probar
 
