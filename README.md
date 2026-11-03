@@ -2,6 +2,19 @@
 
 Proyecto de una aplicación Android para organizar gastos y ahorrar, sin cuenta y con los datos en el teléfono.
 
+## Descargar e instalar en Android
+
+**[Descargar Ahorro 0.1.0 para Android](https://github.com/XFunBox/ahorro-app/releases/latest)**
+
+1. Abre este repositorio en el navegador del móvil con tu sesión de GitHub iniciada: es privado.
+2. Pulsa el enlace de descarga. Si GitHub muestra la página del archivo, pulsa **Download raw file** o **View raw**.
+3. Abre la APK descargada y, si Android lo solicita, permite instalar aplicaciones desde ese navegador o gestor de archivos.
+4. Instala y abre **Ahorro**. Empieza por **Ajustes**, guarda tu configuración y abre el primer ciclo desde **Inicio**.
+
+Requiere **Android 8 o posterior**. Versión de pruebas, con firma de desarrollo. La instalación y la interfaz todavía deben verificarse en un teléfono real.
+
+La carpeta [descargas](descargas) incluye la APK y su checksum SHA-256. El código y las instrucciones de compilación también están en este repositorio.
+
 ## Funciones de la primera versión
 
 - Salario neto, gastos fijos y fechas de cobro configurables.
