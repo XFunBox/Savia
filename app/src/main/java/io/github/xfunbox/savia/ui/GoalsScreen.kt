@@ -14,16 +14,22 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import io.github.xfunbox.savia.*
 import java.util.UUID
+import java.time.LocalDate
 
 @Composable
 internal fun GoalsScreen(data: AppData, cycle: Cycle?, busy: Boolean, save: (AppData) -> Unit) {
     var editing by remember { mutableStateOf<SavingsGoal?>(null) }
     var creating by remember { mutableStateOf(false) }
     var deleting by remember { mutableStateOf<SavingsGoal?>(null) }
+    var entryGoal by remember { mutableStateOf<SavingsGoal?>(null) }
+    var editingEntry by remember { mutableStateOf<SavingsEntry?>(null) }
+    var withdrawal by remember { mutableStateOf(false) }
+    var removingEntry by remember { mutableStateOf<Pair<SavingsGoal, SavingsEntry>?>(null) }
+    var history by remember { mutableStateOf<String?>(null) }
     var pending by remember { mutableStateOf<AppData?>(null) }
     LaunchedEffect(data, pending) {
         if (pending != null && data == pending) {
-            creating = false; editing = null; deleting = null; pending = null
+            creating = false; editing = null; deleting = null; entryGoal = null; editingEntry = null; removingEntry = null; pending = null
         }
     }
     fun submit(next: AppData) {
@@ -34,7 +40,7 @@ internal fun GoalsScreen(data: AppData, cycle: Cycle?, busy: Boolean, save: (App
     Text("Un presupuesto, varios objetivos", style = MaterialTheme.typography.titleLarge)
     Text("Reparte el ahorro que reservas cada periodo. El progreso refleja lo que tú indiques que ya has ahorrado.", style = MaterialTheme.typography.bodyMedium)
     if (cycle != null) {
-        val summary = summarize(cycle, data.movements)
+        val summary = summarize(cycle, data.movements, data.goals)
         Card(shape = RoundedCornerShape(24.dp)) {
             Column(Modifier.fillMaxWidth().padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Amount("Ahorro reservado en este periodo", cycle.target, cycle.currency)
@@ -56,19 +62,39 @@ internal fun GoalsScreen(data: AppData, cycle: Cycle?, busy: Boolean, save: (App
     }
     if (data.goals.isEmpty()) Text("Todavía no tienes objetivos. Crea uno, por ejemplo Vacaciones o Fondo de emergencia.")
     data.goals.forEach { goal ->
+        val total = goalSaved(goal)
         key(goal.id) {
             Card(shape = RoundedCornerShape(24.dp)) {
                 Column(Modifier.fillMaxWidth().padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     Text(goal.name, style = MaterialTheme.typography.titleLarge)
-                    Text("${formatMoney(goal.savedAmount, goal.currency)} de ${formatMoney(goal.targetAmount, goal.currency)}", style = MaterialTheme.typography.titleMedium)
-                    LinearProgressIndicator(progress = { (goal.savedAmount.toFloat() / goal.targetAmount).coerceIn(0f, 1f) },
+                    Text("${formatMoney(total, goal.currency)} de ${formatMoney(goal.targetAmount, goal.currency)}", style = MaterialTheme.typography.titleMedium)
+                    LinearProgressIndicator(progress = { (total.toFloat() / goal.targetAmount).coerceIn(0f, 1f) },
                         modifier = Modifier.fillMaxWidth().height(8.dp).semantics {
-                            contentDescription = "${goal.name}: ahorrados ${formatMoney(goal.savedAmount, goal.currency)} de ${formatMoney(goal.targetAmount, goal.currency)}"
+                            contentDescription = "${goal.name}: ahorrados ${formatMoney(total, goal.currency)} de ${formatMoney(goal.targetAmount, goal.currency)}"
                         })
-                    Text(if (goal.savedAmount >= goal.targetAmount) "¡Objetivo alcanzado!" else "Te faltan ${formatMoney(goal.targetAmount - goal.savedAmount, goal.currency)}")
+                    Text(if (total >= goal.targetAmount) "¡Objetivo alcanzado!" else "Te faltan ${formatMoney(goal.targetAmount - total, goal.currency)}")
+                    goal.targetDate?.let { Text("Fecha de meta: $it", style = MaterialTheme.typography.bodyMedium) }
+                    GoalSuggestion(goal, data.settings, cycle)
                     MoneyLine("Aportación prevista por periodo", goal.periodAmount, goal.currency)
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        OutlinedButton(modifier = Modifier.weight(1f), enabled = !busy, onClick = { editing = goal }) { Text("Editar / actualizar ahorro") }
+                        Button(modifier = Modifier.weight(1f), enabled = !busy, onClick = { entryGoal = goal; editingEntry = null; withdrawal = false }) { Text("Añadir ahorro") }
+                        OutlinedButton(modifier = Modifier.weight(1f), enabled = !busy && total > 0, onClick = { entryGoal = goal; editingEntry = null; withdrawal = true }) { Text("Retirar") }
+                    }
+                    TextButton(onClick = { history = if (history == goal.id) null else goal.id }) { Text(if (history == goal.id) "Ocultar historial" else "Ver historial (${goal.entries.size})") }
+                    if (history == goal.id) {
+                        MoneyLine("Saldo inicial (sin fecha histórica)", goal.savedAmount, goal.currency)
+                        goal.entries.asReversed().sortedByDescending { it.date }.forEach { entry ->
+                            Text("${entry.date} · ${if (entry.withdrawal) "Retirada" else "Aportación"} · ${formatMoney(entry.amount, goal.currency)}")
+                            if (entry.note.isNotBlank()) Text(entry.note, style = MaterialTheme.typography.bodySmall)
+                            Text(if (entry.cycleId == null) "Ahorro externo, sin periodo" else if (entry.additional) "Adicional a la reserva del periodo" else "Dentro de la reserva del periodo", style = MaterialTheme.typography.bodySmall)
+                            Row {
+                                TextButton(enabled = !busy, onClick = { entryGoal = goal; editingEntry = entry; withdrawal = entry.withdrawal }) { Text("Corregir") }
+                                TextButton(enabled = !busy, onClick = { removingEntry = goal to entry }) { Text("Eliminar entrada") }
+                            }
+                        }
+                    }
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        OutlinedButton(modifier = Modifier.weight(1f), enabled = !busy, onClick = { editing = goal }) { Text("Editar objetivo") }
                         IconButton(enabled = !busy, onClick = { deleting = goal }) { Icon(Icons.Default.DeleteOutline, "Eliminar ${goal.name}") }
                     }
                 }
@@ -78,10 +104,23 @@ internal fun GoalsScreen(data: AppData, cycle: Cycle?, busy: Boolean, save: (App
     if (creating || editing != null) GoalForm(editing, data.settings.currency, { creating = false; editing = null; pending = null }) { goal ->
         submit(data.copy(goals = data.goals.filterNot { it.id == goal.id } + goal))
     }
+    entryGoal?.let { goal ->
+        SavingsEntryForm(goal, data.cycles, cycle, editingEntry, withdrawal, { entryGoal = null; pending = null }) { entry ->
+            submit(putSavingsEntry(data, goal.id, entry))
+        }
+    }
+    removingEntry?.let { (goal, entry) ->
+        var localError by remember { mutableStateOf<String?>(null) }
+        AlertDialog(onDismissRequest = { if (!busy) removingEntry = null }, title = { Text("¿Eliminar esta entrada?") },
+            text = { Column { Text("Se recalculará el ahorro y, si procede, el disponible del periodo. No se puede dejar un saldo negativo.")
+                (localError ?: LocalFormSaveError.current)?.let { Text(it, color = MaterialTheme.colorScheme.error) } } },
+            confirmButton = { TextButton(enabled = !busy, onClick = { try { submit(removeSavingsEntry(data, goal.id, entry.id)) } catch (e: Exception) { localError = e.message } }) { Text("Eliminar") } },
+            dismissButton = { TextButton(enabled = !busy, onClick = { removingEntry = null }) { Text("Cancelar") } })
+    }
     deleting?.let { goal ->
         AlertDialog(onDismissRequest = { if (!busy) { deleting = null; pending = null } }, title = { Text("¿Eliminar ${goal.name}?") },
             text = { Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text("Se borrará el objetivo y su progreso registrado. Tu presupuesto, tus movimientos y tu dinero no cambian. Esta acción no se puede deshacer.")
+                Text("Se borrará el objetivo, su saldo inicial y todo su historial. Se liberará cualquier ahorro adicional atribuido a un periodo. Tu presupuesto, tus movimientos y tu dinero no cambian. Esta acción no se puede deshacer.")
                 LocalFormSaveError.current?.let { Text(it, color = MaterialTheme.colorScheme.error) }
             } },
             confirmButton = { TextButton(enabled = !busy, onClick = { submit(data.copy(goals = data.goals.filterNot { it.id == goal.id })) }) { Text(if (busy) "Eliminando…" else "Eliminar objetivo") } },
@@ -92,13 +131,16 @@ internal fun GoalsScreen(data: AppData, cycle: Cycle?, busy: Boolean, save: (App
 @Composable
 private fun GoalForm(previous: SavingsGoal?, defaultCurrency: String, dismiss: () -> Unit, save: (SavingsGoal) -> Unit) {
     val busy = LocalFormBusy.current
+    val id = remember { previous?.id ?: UUID.randomUUID().toString() }
     var name by remember { mutableStateOf(previous?.name ?: "") }
     var target by remember { mutableStateOf(previous?.let { inputMoney(it.targetAmount) } ?: "") }
-    var saved by remember { mutableStateOf(inputMoney(previous?.savedAmount ?: 0)) }
+    var saved by remember { mutableStateOf("0.00") }
+    var dated by remember { mutableStateOf(previous?.targetDate != null) }
+    var targetDate by remember { mutableStateOf(previous?.targetDate ?: LocalDate.now().plusMonths(6)) }
     var period by remember { mutableStateOf(inputMoney(previous?.periodAmount ?: 0)) }
     var currency by remember { mutableStateOf(previous?.currency ?: defaultCurrency) }
     Form(if (previous == null) "Nuevo objetivo" else "Editar objetivo", dismiss, {
-        val goal = SavingsGoal(previous?.id ?: UUID.randomUUID().toString(), name.trim(), money(target), money(saved), money(period), currency)
+        val goal = (previous ?: SavingsGoal(id = id, savedAmount = money(saved))).copy(name = name.trim(), targetAmount = money(target), periodAmount = money(period), currency = currency, targetDate = if (dated) targetDate else null)
         save(goal)
     }) {
         Field("Nombre del objetivo", name, { name = it })
@@ -106,8 +148,10 @@ private fun GoalForm(previous: SavingsGoal?, defaultCurrency: String, dismiss: (
             listOf("EUR", "USD", "GBP", "MXN").forEach { code -> FilterChip(enabled = !busy, selected = currency == code, onClick = { currency = code }, label = { Text(code) }) }
         } else Text("Moneda: $currency. Los objetivos conservan su moneda.", style = MaterialTheme.typography.bodySmall)
         Field("¿Cuánto quieres reunir? ($currency)", target, { target = it }, true)
-        Field("¿Cuánto tienes ya ahorrado? ($currency)", saved, { saved = it }, true)
-        Text("Actualiza este importe cuando apartes dinero de verdad. No se registra como gasto ni como ingreso.", style = MaterialTheme.typography.bodySmall)
+        if (previous == null) Field("Saldo inicial ya ahorrado ($currency)", saved, { saved = it }, true)
+        else Text("El saldo inicial se conserva. Usa Añadir ahorro, Retirar o Corregir para registrar cambios con historial.", style = MaterialTheme.typography.bodySmall)
+        FilterChip(enabled = !busy, selected = dated, onClick = { dated = !dated }, label = { Text(if (dated) "Con fecha objetivo" else "Sin fecha objetivo") })
+        if (dated) DateField("Fecha de meta", targetDate, LocalDate.now(), { targetDate = it })
         Field("Aportación prevista por periodo ($currency)", period, { period = it }, true)
         Text("Es parte del ahorro reservado de tu presupuesto. Déjala en 0 si todavía no has decidido cuánto aportar.", style = MaterialTheme.typography.bodySmall)
     }
@@ -126,5 +170,66 @@ internal fun BudgetBreakdown(income: Long, fixed: Long, daily: Long, reserve: Lo
             MoneyLine("Ahorro que quieres reservar", reserve, currency)
             Text("Es una planificación para el próximo periodo. No confirma dinero ahorrado.", style = MaterialTheme.typography.bodySmall)
         }
+    }
+}
+
+@Composable
+private fun GoalSuggestion(goal: SavingsGoal, settings: Settings, cycle: Cycle?) {
+    val suggestion = suggestGoalContribution(goal, settings)
+    val text = when (suggestion.status) {
+        GoalSuggestionStatus.NO_DATE -> "Sin fecha: tú eliges el ritmo de ahorro."
+        GoalSuggestionStatus.COMPLETED -> "Meta cubierta con tu ahorro confirmado."
+        GoalSuggestionStatus.OVERDUE -> "La fecha de meta ha pasado. Puedes revisarla sin perder tu progreso."
+        GoalSuggestionStatus.INVALID_CALENDAR -> "No hay un cobro válido antes de la meta. Revisa fecha e ingresos en Mi presupuesto."
+        GoalSuggestionStatus.CURRENCY_MISMATCH -> "La moneda del presupuesto es distinta. No calculamos ni convertimos aportaciones."
+        GoalSuggestionStatus.READY -> "Sugerencia: ${formatMoney(suggestion.amountPerPayday, goal.currency)} en cada uno de ${suggestion.paydays} cobros, empezando el ${suggestion.firstPayday}. Si hoy cobras, cuenta como primera aportación. No cambia tu reserva."
+    }
+    Text(text, style = MaterialTheme.typography.bodySmall)
+    if (cycle != null && cycle.currency != goal.currency) Text("Este objetivo no se reparte en el periodo actual (${cycle.currency}).", style = MaterialTheme.typography.bodySmall)
+}
+
+@Composable
+private fun SavingsEntryForm(goal: SavingsGoal, cycles: List<Cycle>, cycle: Cycle?, previous: SavingsEntry?, withdrawal: Boolean,
+    dismiss: () -> Unit, save: (SavingsEntry) -> Unit) {
+    val id = remember { previous?.id ?: UUID.randomUUID().toString() }
+    val today = LocalDate.now()
+    var amount by remember { mutableStateOf(previous?.let { inputMoney(it.amount) } ?: "") }
+    var date by remember { mutableStateOf(previous?.date ?: today) }
+    var note by remember { mutableStateOf(previous?.note ?: "") }
+    val eligible = cycle?.takeIf { it.currency == goal.currency && date >= it.start && date < it.end }
+    val originalCycle = cycles.find { it.id == previous?.cycleId }
+    var selectedCycleId by remember { mutableStateOf(previous?.cycleId ?: if (previous == null) eligible?.id else null) }
+    var additional by remember { mutableStateOf(previous?.additional ?: false) }
+    Form(if (previous != null) "Corregir entrada" else if (withdrawal) "Registrar retirada" else "Añadir ahorro", dismiss, {
+        val selectedCycle = cycles.find { it.id == selectedCycleId }
+        if (selectedCycleId != null) {
+            require(selectedCycle != null && selectedCycle.currency == goal.currency && date >= selectedCycle.start && date < selectedCycle.end) {
+                "La fecha no pertenece al periodo elegido. Revisa la fecha o elige otro periodo o ahorro externo."
+            }
+        }
+        save(SavingsEntry(id, date, money(amount), withdrawal, note.trim(), selectedCycleId, selectedCycleId != null && additional))
+    }) {
+        Text("${goal.name} · Ahorrado: ${formatMoney(goalSaved(goal), goal.currency)}")
+        Field("Importe (${goal.currency})", amount, { amount = it }, true)
+        DateField("Fecha real", date, today, { date = it }, maximum = maxOf(today, previous?.date ?: today))
+        Field("Nota (opcional)", note, { note = it })
+        if (eligible != null || selectedCycleId != null || originalCycle != null) {
+            Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                FilterChip(selected = selectedCycleId == null, enabled = !LocalFormBusy.current,
+                    onClick = { selectedCycleId = null }, label = { Text("Ahorro externo, sin periodo") })
+                listOfNotNull(originalCycle, eligible).distinctBy { it.id }.forEach { option ->
+                    FilterChip(selected = selectedCycleId == option.id, enabled = !LocalFormBusy.current,
+                        onClick = { selectedCycleId = option.id }, label = {
+                            Text("${if (option.id == cycle?.id) "Periodo actual" else "Periodo original"}: ${option.start} – ${option.end.minusDays(1)}")
+                        })
+                }
+            }
+            if (selectedCycleId != null) {
+                FilterChip(selected = additional, enabled = !LocalFormBusy.current, onClick = { additional = !additional }, label = { Text(if (additional) "Adicional a la reserva" else "Dentro de la reserva") })
+                Text(if (additional) "El neto adicional reduce el disponible del periodo. Una retirada adicional libera como máximo lo aportado adicionalmente."
+                    else "La reserva ya se descontó del disponible. Esta entrada no vuelve a descontarla.", style = MaterialTheme.typography.bodySmall)
+            } else Text("Ahorro externo: no cambia el disponible de ningún periodo.", style = MaterialTheme.typography.bodySmall)
+        } else Text("Se registra como ahorro externo: sin un periodo compatible para esta fecha y moneda, no cambia el disponible.", style = MaterialTheme.typography.bodySmall)
+        Text("Registra dinero que ya has apartado o retirado. Savia no hace transferencias ni crea gastos o ingresos con estas entradas.", style = MaterialTheme.typography.bodySmall)
     }
 }

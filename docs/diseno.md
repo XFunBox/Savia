@@ -38,3 +38,7 @@ Un presupuesto común y hasta 100 objetivos independientes, con nombre, moneda, 
 Mi presupuesto separa ingresos, gastos fijos, gastos del día a día y ahorro reservado. Muestra el reparto y avisa si los gastos o la reserva exceden la capacidad prevista. Inicio distingue disponible, reserva y previsión; Objetivos está en la navegación principal.
 
 Resumen permite borrar un periodo y exclusivamente sus movimientos, previa confirmación con fechas y número de movimientos. Presupuesto y objetivos se conservan. Las copias pasan a versión 2 e incluyen objetivos; versión 1 sigue admitida y se importa con objetivos vacíos, conservando todos sus datos originales.
+
+## Desarrollo: historial, calendario y revisión
+
+Las siete mejoras posteriores a 2.1.0 se describen en [desarrollo-siete-mejoras.md](desarrollo-siete-mejoras.md). El almacenamiento pasa a v4 manteniendo lectura v1–v3. Los saldos anteriores permanecen como saldo inicial, separado de entradas con fecha; no se inventa un historial. Solo ahorro adicional neto reduce el disponible además de la reserva. Vencimientos y límites conservan instantáneas por periodo. Cierres son revisiones explícitas con aportaciones idempotentes; no generan ingresos del siguiente periodo. Preferencias y metadatos de avisos permanecen en el dispositivo, fuera de la copia financiera.

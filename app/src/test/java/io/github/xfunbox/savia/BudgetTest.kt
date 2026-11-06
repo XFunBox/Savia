@@ -32,6 +32,22 @@ class BudgetTest {
         assertEquals(unpaid.forecast, paid.forecast)
     }
 
+    @Test fun onlyPositiveNetAdditionalSavingsReduceAvailableWithoutCreatingExpenses() {
+        val c = cycle()
+        val reserved = SavingsEntry("reserved", start, 5000, cycleId = c.id)
+        val extra = SavingsEntry("extra", start, 2000, cycleId = c.id, additional = true)
+        val returned = SavingsEntry("returned", start, 500, withdrawal = true, cycleId = c.id, additional = true)
+        val goal = SavingsGoal("g", "Meta", 10000, 5000, entries = listOf(reserved, extra, returned))
+        val baseline = summarize(c, emptyList())
+        val result = summarize(c, emptyList(), listOf(goal))
+        assertEquals(baseline.copy(available = baseline.available - 1500), result)
+        assertEquals(baseline, summarize(c, emptyList(), listOf(goal.copy(entries = listOf(reserved)))))
+        assertEquals(baseline, summarize(c, emptyList(), listOf(goal.copy(entries = listOf(extra, returned.copy(amount = 3000))))))
+        assertEquals(baseline, summarize(c, emptyList(), listOf(goal.copy(currency = "USD"))))
+        assertEquals(baseline, summarize(c, emptyList(), listOf(goal.copy(entries = listOf(extra.copy(cycleId = null))))))
+        assertEquals(baseline, summarize(c, emptyList(), listOf(goal.copy(entries = listOf(extra.copy(cycleId = "other"))))))
+    }
+
     @Test fun deficitsStayNegativeAndForecastUsesActualVariableSpend() {
         val summary = summarize(cycle(), listOf(Movement("food", "cycle", start, 60000)))
         assertEquals(-40000, summary.available)

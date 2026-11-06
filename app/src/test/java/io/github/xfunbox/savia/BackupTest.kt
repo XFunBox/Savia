@@ -16,13 +16,13 @@ class BackupTest {
             listOf(SavingsGoal("trip", "Viaje", 123456, 23456, 1234, "USD"),
                 SavingsGoal("done", "Completado", 1, MAX_MONEY, 0, "EUR")))
         val encoded = Backup.encode(data)
-        assertEquals(2, JSONObject(encoded).getInt("version"))
+        assertEquals(4, JSONObject(encoded).getInt("version"))
         assertEquals(data, Backup.decode(encoded))
     }
 
     @Test fun rejectsMalformedUnknownOversizedAndLossyNumbers() {
         val valid = Backup.encode(AppData())
-        listOf("not json", JSONObject(valid).put("version", 3).toString(), " ".repeat(5 * 1024 * 1024 + 1),
+        listOf("not json", JSONObject(valid).put("version", 5).toString(), " ".repeat(5 * 1024 * 1024 + 1),
             JSONObject(valid).also { it.getJSONObject("settings").put("salary", 1.5) }.toString(),
             JSONObject(valid).also { it.getJSONObject("settings").put("payday", "1") }.toString(),
             JSONObject(valid).also { it.getJSONObject("settings").put("automaticTarget", "true") }.toString(),
@@ -53,7 +53,8 @@ class BackupTest {
     }
 
     @Test fun versionTwoRequiresGoalsAndEveryGoalFieldWithExactTypes() {
-        val valid = Backup.encode(AppData(goals = listOf(SavingsGoal("g", "Meta", 1000, 2000, 300, "EUR"))))
+        val valid = JSONObject(Backup.encode(AppData(goals = listOf(SavingsGoal("g", "Meta", 1000, 2000, 300, "EUR")))))
+            .put("version", 2).toString()
         val missingGoals = JSONObject(valid).apply { remove("goals") }.toString()
         val invalid = mutableListOf(missingGoals,
             JSONObject(valid).put("goals", JSONObject.NULL).toString(),
@@ -75,7 +76,7 @@ class BackupTest {
     }
 
     @Test fun versionTwoRejectsDuplicateAndExcessGoals() {
-        val root = JSONObject(Backup.encode(AppData(goals = listOf(SavingsGoal("g", "Meta", 1)))))
+        val root = JSONObject(Backup.encode(AppData(goals = listOf(SavingsGoal("g", "Meta", 1))))).put("version", 2)
         val goal = root.getJSONArray("goals").getJSONObject(0)
         root.getJSONArray("goals").put(JSONObject(goal.toString()))
         assertThrows(IllegalArgumentException::class.java) { Backup.decode(root.toString()) }
@@ -83,5 +84,64 @@ class BackupTest {
             repeat(101) { put(JSONObject(goal.toString()).put("id", "goal-$it")) }
         })
         assertThrows(IllegalArgumentException::class.java) { Backup.decode(root.toString()) }
+    }
+
+    @Test fun legacyBalanceIsUndatedAndV3PreservesHistoryAndDeadline() {
+        val goal = SavingsGoal("g", "Meta", 10000, 2000, 300)
+        val legacy = JSONObject(Backup.encode(AppData(goals = listOf(goal)))).put("version", 2)
+        legacy.getJSONArray("goals").getJSONObject(0).apply { remove("entries"); remove("targetDate") }
+        val migrated = Backup.decode(legacy.toString())
+        assertEquals(goal, migrated.goals.single())
+        assertTrue(migrated.goals.single().entries.isEmpty())
+        val date = LocalDate.of(2024, 2, 29)
+        val cycle = Cycle("c", date, date.plusMonths(1), 10000)
+        val entries = listOf(SavingsEntry("in", date, 1000, note = "Confirmado", cycleId = "c", additional = true),
+            SavingsEntry("out", date.plusDays(1), 500, withdrawal = true, note = "Retirada"))
+        val data = AppData(cycles = listOf(cycle), goals = listOf(goal.copy(entries = entries, targetDate = date.plusMonths(6))))
+        assertEquals(data, Backup.decode(Backup.encode(data)))
+        assertEquals(migrated, Backup.decode(Backup.encode(migrated)))
+    }
+
+    @Test fun versionThreeRejectsMissingLossyOrInvalidHistoryFields() {
+        val date = LocalDate.of(2026, 1, 1)
+        val valid = Backup.encode(AppData(goals = listOf(SavingsGoal("g", "Meta", 10000,
+            entries = listOf(SavingsEntry("e", date, 100)), targetDate = date.plusYears(1)))))
+        val invalid = mutableListOf<String>()
+        listOf("entries", "targetDate").forEach { field ->
+            invalid += JSONObject(valid).apply { getJSONArray("goals").getJSONObject(0).remove(field) }.toString()
+        }
+        listOf("id", "date", "amount", "withdrawal", "note", "cycleId", "additional").forEach { field ->
+            invalid += JSONObject(valid).apply {
+                getJSONArray("goals").getJSONObject(0).getJSONArray("entries").getJSONObject(0).remove(field)
+            }.toString()
+        }
+        listOf("amount" to 1.5, "amount" to "100", "date" to "2026-02-30", "date" to 123,
+            "withdrawal" to "false", "additional" to 1, "note" to true, "cycleId" to 123,
+            "cycleId" to "missing", "withdrawal" to true, "amount" to 0).forEach { (field, value) ->
+            invalid += JSONObject(valid).apply {
+                getJSONArray("goals").getJSONObject(0).getJSONArray("entries").getJSONObject(0).put(field, value)
+            }.toString()
+        }
+        listOf<Any>("2026-02-30", 123, "10000-01-01").forEach { value ->
+            invalid += JSONObject(valid).apply { getJSONArray("goals").getJSONObject(0).put("targetDate", value) }.toString()
+        }
+        invalid.forEach { assertThrows(IllegalArgumentException::class.java) { Backup.decode(it) } }
+    }
+    @Test fun versionFourPreservesSchedulesLimitsAndRejectsLossyNewFields() {
+        val start = LocalDate.parse("2026-01-01")
+        val settings = Settings(salary = 100000, fixedExpenses = listOf(FixedExpense("b", "Seguro", 10000, 31, 1)),
+            categoryLimits = mapOf("Comida" to 10000))
+        val data = AppData(settings, listOf(newCycle(settings, start, start.plusMonths(1))))
+        assertEquals(data, Backup.decode(Backup.encode(data)))
+        val root = JSONObject(Backup.encode(data))
+        root.getJSONObject("settings").getJSONArray("fixedExpenses").getJSONObject(0).put("dueDay", 1.5)
+        assertThrows(IllegalArgumentException::class.java) { Backup.decode(root.toString()) }
+        val limits = JSONObject(Backup.encode(data))
+        limits.getJSONObject("settings").getJSONObject("categoryLimits").put(" comida ", 1)
+        assertThrows(IllegalArgumentException::class.java) { Backup.decode(limits.toString()) }
+        val legacy = JSONObject(Backup.encode(data)).put("version", 3)
+        val imported = Backup.decode(legacy.toString())
+        assertTrue(imported.settings.categoryLimits.isEmpty())
+        assertNull(imported.settings.fixedExpenses.single().dueDay)
     }
 }

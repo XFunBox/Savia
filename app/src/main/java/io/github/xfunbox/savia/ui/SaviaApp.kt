@@ -33,7 +33,7 @@ import java.time.LocalDate
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SaviaApp() {
+fun SaviaApp(reminderDestination: String? = null, reminderRequestId: Int = 0) {
     val context = LocalContext.current
     val store = remember { AppStore(context.applicationContext) }
     val scope = rememberCoroutineScope()
@@ -44,6 +44,13 @@ fun SaviaApp() {
     var notice by remember { mutableStateOf<String?>(null) }
     var page by remember { mutableIntStateOf(0) }
     var addRequest by remember { mutableIntStateOf(0) }
+    var openBackup by remember { mutableStateOf(false) }
+    LaunchedEffect(reminderDestination, reminderRequestId, data != null) {
+        if (data != null && reminderDestination != null) {
+            openBackup = reminderDestination == LocalReminders.DESTINATION_BACKUP
+            page = if (openBackup) 4 else 0
+        }
+    }
     val snackbar = remember { SnackbarHostState() }
     BackHandler(enabled = page != 0) { page = 0 }
     LaunchedEffect(notice) {
@@ -67,6 +74,7 @@ fun SaviaApp() {
         scope.launch {
             try {
                 data = withContext(Dispatchers.IO) { store.load() }
+                data?.let { runCatching { LocalReminders.refresh(context, it) } }
                 page = 0
             } catch (e: Exception) { error = e.message ?: "No se pudieron cargar los datos." }
             finally { busy = false; loading = false }
@@ -80,6 +88,7 @@ fun SaviaApp() {
             try {
                 withContext(Dispatchers.IO) { store.save(next) }
                 data = next
+                runCatching { LocalReminders.refresh(context, next) }
                 if (page == 4 && next.cycles.isEmpty()) page = 0
                 notice = "Cambios guardados"
             } catch (e: Exception) { error = e.message ?: "No se pudieron guardar los cambios." }
@@ -97,6 +106,7 @@ fun SaviaApp() {
                             ?: kotlin.error("No se puede abrir el archivo de destino.")
                         output.use { it.write(text.toByteArray(Charsets.UTF_8)) }
                     }
+                    LocalReminders.recordExport(context)
                     notice = "Copia exportada"
                 } catch (e: Exception) { error = e.message ?: "Error al exportar." }
                 finally { busy = false }
@@ -180,7 +190,7 @@ fun SaviaApp() {
                             onSettings = { page = 4 },
                             onExport = { export.launch("ahorro-${LocalDate.now()}.json") },
                             onImport = { import.launch(arrayOf("application/json", "text/plain", "application/octet-stream")) },
-                            addRequest = addRequest, onPlan = { page = 2 })
+                            addRequest = addRequest, onPlan = { page = 2 }, openBackup = openBackup)
                         }
                     }
                 }
@@ -197,6 +207,7 @@ fun SaviaApp() {
                     try {
                         val imported = withContext(Dispatchers.IO) { store.import(text) }
                         data = imported
+                        runCatching { LocalReminders.refresh(context, imported) }
                         pendingImport = null
                         error = null
                         page = 0
