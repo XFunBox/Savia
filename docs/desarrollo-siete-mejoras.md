@@ -1,6 +1,6 @@
 # Desarrollo de las siete mejoras de Savia
 
-Implementación en rama `feat/plan-mejoras-savia`, a partir de 2.1.0. Este documento describe el desarrollo; no anuncia una versión publicada. El plan de entregas y sus controles en teléfono siguen en `tasks/plan.md` y `tasks/todo.md`.
+Implementación en rama `feat/plan-mejoras-savia`, a partir de 2.1.0. Sendoa confirma la validación en teléfono y autoriza publicar el 6/11/2026. Las siete mejoras se reúnen en 2.2.0; la publicación se confirma en la release de GitHub. El plan de entregas y sus controles en teléfono siguen en `tasks/plan.md` y `tasks/todo.md`.
 
 ## Comportamiento
 
@@ -16,6 +16,6 @@ Implementación en rama `feat/plan-mejoras-savia`, a partir de 2.1.0. Este docum
 
 ## Verificación y salida
 
-Pruebas JVM del modelo disponibles en `app/src/test`. La compilación Android, lint y controles de publicación se ejecutan en la CI de la PR. La validación de interfaz, permisos, reinicio y copia/recuperación en teléfono debe registrarse separadamente; no se deduce del resultado de CI. No se ha cambiado versión, firmado una APK de publicación ni creado un tag.
+Pruebas JVM del modelo disponibles en `app/src/test`. La compilación Android, lint y controles de publicación se ejecutan en la CI de la PR. La validación de interfaz, permisos, reinicio y copia/recuperación en teléfono debe registrarse separadamente; no se deduce del resultado de CI. La preparación de 2.2.0 incrementa versionCode a 6; el flujo de publicación verifica la APK firmada antes de hacerla pública.
 
-Antes de publicar: comprobar en el teléfono actualización con firma definitiva, exportación/importación sin pérdidas, aportación/retirada/corrección, pagos anuales y pendientes, notificaciones concedidas/denegadas, límites, cierre repetido y dos periodos. Mantener los controles A/B/C del plan y decidir el alcance final de cada versión con esos resultados.
+Recorrido previsto de validación (Sendoa confirma validación general el 6/11/2026, sin detallar cada caso): comprobar en el teléfono actualización con firma definitiva, exportación/importación sin pérdidas, aportación/retirada/corrección, pagos anuales y pendientes, notificaciones concedidas/denegadas, límites, cierre repetido y dos periodos. Mantener los controles A/B/C del plan y decidir el alcance final de cada versión con esos resultados.

@@ -122,3 +122,8 @@ No marcar casillas por previsión: registrar únicamente comprobaciones realizad
 ## Avance de desarrollo · 6/11/2026
 
 T1–T11 implementadas en la rama de desarrollo; las casillas compuestas con pruebas de teléfono/publicación permanecen pendientes hasta comprobarlas. El modelo de ahorro, pagos, límites, cierre y migraciones v1–v4 tiene pruebas JVM. Compilación Android y revisión se registran en la PR. Comportamiento y límites en `docs/desarrollo-siete-mejoras.md`. Sin nueva release ni pruebas de teléfono atribuidas al usuario.
+
+
+## Autorización de publicación · 6/11/2026
+
+Sendoa confirma «Publica, que ya hye validado». Se registra su validación en teléfono de las funciones nuevas y autorización para publicar las siete mejoras juntas en 2.2.0, versionCode 6. No se atribuyen pasos individuales de prueba ni una evaluación de testers que no haya detallado. CI de desarrollo 42174020304 correcta; se comprobará de nuevo la preparación de release y la APK firmada antes de anunciarla. Las casillas históricas no sustituyen este registro fechado.

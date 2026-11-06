@@ -2,7 +2,7 @@
 
 Fecha: 5 de noviembre de 2026. Base comprobada: Savia 2.1.0, main `48d34bd`.
 
-Estado: alcance aceptado por Sendoa y plan redactado. La implementación no ha comenzado. Las versiones indicadas son propuestas; se confirmarán al preparar cada release. Lista de tareas: [todo.md](todo.md).
+Estado actualizado 6/11/2026: siete mejoras implementadas y CI correcta; Sendoa confirma la validación en teléfono y autoriza publicar. Se reúnen las entregas propuestas en 2.2.0 (versionCode 6). Las fases siguientes conservan el diseño original como referencia. Lista de tareas: [todo.md](todo.md).
 
 ## Objetivo y alcance
 
