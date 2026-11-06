@@ -10,4 +10,4 @@
 
 Esta versión usa la nueva firma definitiva. Exporta tus datos en JSON y guarda la copia fuera de la app antes de desinstalar 2.0.0. Después instala 2.1.0 e importa la copia. La actualización directa desde la APK antigua de pruebas no es compatible por el cambio de firma.
 
-Pruebas, compilación y lint comprobados automáticamente. La revisión visual y la prueba de exportación/importación en teléfono siguen pendientes.
+Pruebas, compilación y lint comprobados automáticamente. El 5 de noviembre de 2026, Sendoa confirma que ha probado la versión 2.1.0 en teléfono y funciona bien. La prueba específica de exportación/importación y migración en teléfono sigue pendiente de confirmación.

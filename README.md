@@ -4,15 +4,19 @@ Aplicación Android para organizar gastos y ahorrar, sin cuenta y con los datos 
 
 ## Descargar e instalar
 
-**[Descargar Savia 2.1.0 desde Releases](https://github.com/XFunBox/Savia/releases/tag/v2.1.0)**
+**[Descargar Savia 2.2.0 desde Releases](https://github.com/XFunBox/Savia/releases/tag/v2.2.0)**
 
-[Descarga directa de Savia 2.1.0](https://github.com/XFunBox/Savia/releases/download/v2.1.0/Savia-2.1.0.apk)
+[Descarga directa de Savia 2.2.0](https://github.com/XFunBox/Savia/releases/download/v2.2.0/Savia-2.2.0.apk)
 
-1. Descarga `Savia-2.1.0.apk` desde Releases o desde el enlace directo.
+1. Descarga `Savia-2.2.0.apk` desde Releases o desde el enlace directo.
 2. Abre la APK y, si Android lo solicita, permite instalar aplicaciones desde ese navegador o gestor de archivos.
 3. Abre **Savia**, configura Mi presupuesto y crea el primer periodo desde Inicio.
 
-Requiere **Android 12 o posterior**. La versión 2.1.0 pasa pruebas, compilación y lint automáticos; la revisión visual y la prueba de migración en teléfono siguen pendientes.
+Requiere **Android 12 o posterior**. La versión 2.2.0 reúne las siete mejoras de planificación y ahorro. Sendoa confirma su validación en teléfono el 6 de noviembre de 2026. Pruebas, compilación, lint y firma se comprueban en la publicación.
+
+### Actualización desde Savia 2.1.0
+
+Exporta una copia JSON y guárdala fuera de la app. Instala la APK 2.2.0 sobre la anterior: conserva el identificador y la firma definitiva. No hace falta desinstalar. Las copias nuevas incluyen el historial y las revisiones; no pueden importarse en versiones antiguas.
 
 ### Actualización desde Savia 2.0.0 de pruebas
 
@@ -28,13 +32,14 @@ Savia tiene un identificador Android nuevo, así que se instala como una aplicac
 
 Las copias JSON no están cifradas. No desinstales Ahorro hasta comprobar la importación en Savia.
 
-## Novedades de 2.1.0
+## Novedades de 2.2.0
 
-- Varios objetivos de ahorro que comparten un presupuesto.
-- Ingresos, gastos y ahorro reservado separados, con desglose y avisos.
-- Borrado de periodos y sus movimientos con confirmación.
-- Copias de seguridad con objetivos y compatibilidad con las copias anteriores.
-- Firma definitiva y publicación con verificaciones automáticas.
+- Aportaciones y retiradas con historial, corrección y fecha opcional de meta.
+- Sugerencia de aportación por cobros y guía para preparar el presupuesto.
+- Pagos mensuales y anuales con vencimiento y avisos locales opcionales.
+- Límites por categoría y revisión del periodo con ahorro confirmado.
+- Fecha de última exportación y recordatorio de copia configurable.
+- Copias completas compatibles con los formatos anteriores.
 
 ## Funciones
 
@@ -62,6 +67,7 @@ El material de firma no se incluye en el repositorio.
 ## Documentación
 
 - [Diseño y alcance](docs/diseno.md).
+- [Cambios de Savia 2.2.0](docs/cambios-2.2.0.md).
 - [Cambios de Savia 2.1.0](docs/cambios-2.1.0.md).
 - [Cambios anteriores de Savia 2.0.0](docs/notas-version-2.0.md).
 - [Firma y publicación de actualizaciones](docs/publicacion.md).
@@ -72,6 +78,6 @@ Este repositorio no incluye una licencia de código. Hacerlo público permite co
 
 ## Alcance actual
 
-Interfaz en español. EUR, USD, GBP y MXN, una moneda por ciclo y sin conversión. Los fijos se prevén por ciclo. Las fechas de los periodos se pueden ajustar al abrirlos. El objetivo sugerido se calcula con una fórmula visible; no usa IA ni requiere conexión.
+Interfaz en español. EUR, USD, GBP y MXN, una moneda por ciclo y sin conversión. Los fijos se prevén por ciclo o por vencimiento mensual/anual. Las fechas de los periodos se pueden ajustar al abrirlos. El objetivo sugerido se calcula con una fórmula visible; no usa IA ni requiere conexión.
 
 La previsión no representa dinero transferido a una cuenta de ahorro. Los datos se guardan en el almacenamiento privado de Android; exporta una copia antes de desinstalar la app.

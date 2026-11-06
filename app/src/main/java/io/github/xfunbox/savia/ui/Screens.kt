@@ -25,7 +25,6 @@ import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.time.temporal.ChronoUnit
 import java.util.Locale
-import java.util.UUID
 
 private val shortDate = DateTimeFormatter.ofPattern("dd MMM", Locale.forLanguageTag("es-ES"))
 private fun LocalDate.readable() = format(shortDate)
@@ -33,7 +32,7 @@ private fun LocalDate.readable() = format(shortDate)
 @Composable
 internal fun Screens(data: AppData, page: Int, today: LocalDate, busy: Boolean,
     save: (AppData) -> Unit, onSettings: () -> Unit, onExport: () -> Unit, onImport: () -> Unit,
-    addRequest: Int = 0, onPlan: () -> Unit = {}) {
+    addRequest: Int = 0, onPlan: () -> Unit = {}, openBackup: Boolean = false) {
     val cycle = data.cycles.maxByOrNull { it.start }
     var movementPage by remember(cycle?.id) { mutableIntStateOf(0) }
     var movementQuery by remember(cycle?.id) { mutableStateOf("") }
@@ -42,6 +41,7 @@ internal fun Screens(data: AppData, page: Int, today: LocalDate, busy: Boolean,
     var edit by remember { mutableStateOf<Movement?>(null) }
     var repeating by remember { mutableStateOf(false) }
     var delete by remember { mutableStateOf<Movement?>(null) }
+    var paying by remember { mutableStateOf<Pair<Cycle, FixedExpense>?>(null) }
     var failure by remember { mutableStateOf<String?>(null) }
     fun change(next: AppData) {
         try { validateData(next); save(next); failure = null }
@@ -49,6 +49,9 @@ internal fun Screens(data: AppData, page: Int, today: LocalDate, busy: Boolean,
     }
     LaunchedEffect(addRequest) {
         if (addRequest > 0 && cycle != null) { edit = null; repeating = false; dialog = "movement" }
+    }
+    LaunchedEffect(data, paying) {
+        paying?.let { (period, bill) -> if (data.movements.any { it.cycleId == period.id && it.billId == bill.id }) paying = null }
     }
     LaunchedEffect(data, pendingDialogSave) {
         if (pendingDialogSave != null && data == pendingDialogSave) {
@@ -73,8 +76,7 @@ internal fun Screens(data: AppData, page: Int, today: LocalDate, busy: Boolean,
                         }
                     }
                 } else {
-                    val summary = summarize(cycle, data.movements)
-                    val active = today >= cycle.start && today < cycle.end
+                    val summary = summarize(cycle, data.movements, data.goals)
                     val remaining = ChronoUnit.DAYS.between(maxOf(today, cycle.start), cycle.end).coerceAtLeast(0)
                     CycleLabel(cycle)
                     Surface(shape = RoundedCornerShape(28.dp), color = MaterialTheme.colorScheme.primaryContainer) {
@@ -93,6 +95,7 @@ internal fun Screens(data: AppData, page: Int, today: LocalDate, busy: Boolean,
                         }
                     }
                     BudgetCard(summary.variableSpent, cycle.variableBudget, cycle.currency)
+                    CategoryLimits(cycle, data.movements)
                     Amount("Ahorro previsto al terminar", summary.forecast, cycle.currency)
                     Text("Estimación tras tus gastos previstos; aún no es dinero ahorrado.", style = MaterialTheme.typography.bodySmall)
                     if (cycle.target > summary.forecast) Text("Tu reserva supera el ahorro previsto en ${formatMoney(cycle.target - summary.forecast, cycle.currency)}. Revisa los gastos o ajusta la reserva.", color = MaterialTheme.colorScheme.error)
@@ -113,19 +116,19 @@ internal fun Screens(data: AppData, page: Int, today: LocalDate, busy: Boolean,
                         Text("${cycle.bills.count { bill -> data.movements.any { it.cycleId == cycle.id && it.billId == bill.id } }} / ${cycle.bills.size} pagados", style = MaterialTheme.typography.labelMedium)
                     }
                     if (cycle.bills.isEmpty()) Text("No tienes gastos fijos en este periodo.", style = MaterialTheme.typography.bodyMedium)
-                    if (!active && cycle.bills.isNotEmpty()) Text("Los pagos se marcan durante el periodo.", style = MaterialTheme.typography.bodySmall)
+                    if (today >= cycle.end && cycle.bills.isNotEmpty()) Text("Puedes confirmar un pago pendiente eligiendo su fecha real dentro de este periodo.", style = MaterialTheme.typography.bodySmall)
                     Column {
                         cycle.bills.forEach { bill ->
                             val paid = data.movements.firstOrNull { it.cycleId == cycle.id && it.billId == bill.id }
-                            Row(Modifier.fillMaxWidth().toggleable(value = paid != null, enabled = !busy && (paid != null || active), role = Role.Checkbox,
+                            Row(Modifier.fillMaxWidth().toggleable(value = paid != null, enabled = !busy && (paid != null || today >= cycle.start), role = Role.Checkbox,
                                 onValueChange = { checked ->
                                     if (!checked) delete = paid
-                                    else change(data.copy(movements = data.movements + Movement(UUID.randomUUID().toString(), cycle.id, today, bill.amount, category = "Fijos", billId = bill.id)))
+                                    else paying = cycle to bill
                                 }).padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-                                Checkbox(checked = paid != null, onCheckedChange = null, enabled = !busy && (paid != null || active))
+                                Checkbox(checked = paid != null, onCheckedChange = null, enabled = !busy && (paid != null || today >= cycle.start))
                                 Column(Modifier.weight(1f).padding(horizontal = 10.dp)) {
                                     Text(bill.name, style = MaterialTheme.typography.bodyLarge)
-                                    Text(paid?.let { "Pagado · ${it.date.readable()}" } ?: "Pendiente", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    Text(paid?.let { "Pagado · ${it.date.readable()}" } ?: bill.dueDate?.let { "Vence ${it.readable()}" } ?: "Pendiente · sin vencimiento", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                 }
                                 Text(formatMoney(bill.amount, cycle.currency), style = MaterialTheme.typography.titleSmall)
                             }
@@ -134,6 +137,7 @@ internal fun Screens(data: AppData, page: Int, today: LocalDate, busy: Boolean,
                     }
                     if (!today.isBefore(cycle.end)) Button(enabled = !busy, onClick = { dialog = "cycle" }, modifier = Modifier.fillMaxWidth()) { Text("Empezar siguiente periodo") }
                 }
+                UpcomingPayments(data, today, busy) { period, bill -> paying = period to bill }
             }
             1 -> {
                 if (cycle == null) EmptyMessage(Icons.AutoMirrored.Filled.ReceiptLong, "Tu primer movimiento", "Empieza un periodo desde Inicio para añadir ingresos y gastos.")
@@ -168,10 +172,16 @@ internal fun Screens(data: AppData, page: Int, today: LocalDate, busy: Boolean,
                 }
             }
             2 -> GoalsScreen(data, cycle, busy, save)
-            3 -> History(data, busy, save)
-            4 -> SettingsScreen(data.settings, busy, onSave = { change(data.copy(settings = it)) }, onExport = onExport, onImport = onImport)
+            3 -> History(data, today, busy, save)
+            4 -> SettingsScreen(data.settings, busy, onSave = { change(data.copy(settings = it)) }, onExport = onExport, onImport = onImport, initialSection = if (openBackup) "backup" else null)
         }
         Spacer(Modifier.height(88.dp))
+    }
+    paying?.let { (period, bill) ->
+        key(period.id, bill.id) { PaymentForm(period, bill, today, { paying = null }) { date ->
+            val next = payScheduledBill(data, period.id, bill.id, date)
+            save(next)
+        } }
     }
     if (dialog == "cycle") CycleForm(data.settings, cycle, today, onDismiss = { dialog = null; pendingDialogSave = null }) { start, end, income ->
         val next = data.copy(cycles = data.cycles + newCycle(data.settings, start, end, income))
@@ -191,11 +201,14 @@ internal fun Screens(data: AppData, page: Int, today: LocalDate, busy: Boolean,
         dismissButton = { TextButton(onClick = { delete = null }) { Text("Cancelar") } }) }
 }
 
-@Composable private fun History(data: AppData, busy: Boolean, save: (AppData) -> Unit) {
+@Composable private fun History(data: AppData, today: LocalDate, busy: Boolean, save: (AppData) -> Unit) {
     var deleting by remember { mutableStateOf<Cycle?>(null) }
+    var editingMovement by remember { mutableStateOf<Movement?>(null) }
+    var removingMovement by remember { mutableStateOf<Movement?>(null) }
+    var showMovements by remember { mutableStateOf(false) }
     var pending by remember { mutableStateOf<AppData?>(null) }
     LaunchedEffect(data, pending) {
-        if (pending != null && data == pending) { deleting = null; pending = null }
+        if (pending != null && data == pending) { deleting = null; editingMovement = null; removingMovement = null; pending = null }
     }
     deleting?.let { item ->
         AlertDialog(onDismissRequest = { if (!busy) { deleting = null; pending = null } },
@@ -232,7 +245,7 @@ internal fun Screens(data: AppData, page: Int, today: LocalDate, busy: Boolean,
             }
         }
     }
-    val summary = summarize(cycle, data.movements)
+    val summary = summarize(cycle, data.movements, data.goals)
     Card(shape = RoundedCornerShape(28.dp)) {
         Column(Modifier.fillMaxWidth().padding(24.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
             Amount("Saldo registrado", summary.balance, cycle.currency)
@@ -243,6 +256,8 @@ internal fun Screens(data: AppData, page: Int, today: LocalDate, busy: Boolean,
         }
     }
     Text("El saldo es lo registrado; no confirma una transferencia a tu ahorro.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    PeriodReview(data, cycle, today, busy, save)
+    CategoryLimits(cycle, data.movements)
     Title("En qué has gastado")
     val categories = remember(data.movements, cycle.id) {
         data.movements.filter { it.cycleId == cycle.id && !it.income }.groupBy { it.category }
@@ -260,6 +275,33 @@ internal fun Screens(data: AppData, page: Int, today: LocalDate, busy: Boolean,
         }
     }
     Pages(currentCategoryPage, categories.size) { categoryPage = it }
+    TextButton(onClick = { showMovements = !showMovements }) { Text(if (showMovements) "Ocultar movimientos" else "Revisar movimientos del periodo") }
+    if (showMovements) {
+        val historyMovements = data.movements.filter { it.cycleId == cycle.id }.sortedByDescending { it.date }
+        var movementPage by remember(cycle.id) { mutableIntStateOf(0) }
+        val current = movementPage.coerceIn(0, lastPage(historyMovements.size))
+        historyMovements.drop(current * PAGE_SIZE).take(PAGE_SIZE).forEach { movement ->
+            key(movement.id) { MovementRow(movement, cycle.currency, busy, onEdit = { editingMovement = movement }, onDelete = { removingMovement = movement }) }
+        }
+        Pages(current, historyMovements.size) { movementPage = it }
+    }
+    editingMovement?.let { movement ->
+        val originalCycle = data.cycles.first { it.id == movement.cycleId }
+        MovementForm(originalCycle, today, movement, onDismiss = { editingMovement = null; pending = null }) { corrected ->
+            val next = data.copy(movements = data.movements.map { if (it.id == corrected.id) corrected else it })
+            validateData(next); pending = next; save(next)
+        }
+    }
+    removingMovement?.let { movement ->
+        AlertDialog(onDismissRequest = { if (!busy) removingMovement = null }, title = { Text("¿Eliminar este movimiento?") },
+            text = { Column { Text("Se recalculará el periodo y se indicará que su revisión ha cambiado. Si es un pago fijo, volverá a estar pendiente.")
+                LocalFormSaveError.current?.let { Text(it, color = MaterialTheme.colorScheme.error) } } },
+            confirmButton = { TextButton(enabled = !busy, onClick = {
+                val next = data.copy(movements = data.movements.filterNot { it.id == movement.id })
+                validateData(next); pending = next; save(next)
+            }) { Text("Eliminar") } },
+            dismissButton = { TextButton(enabled = !busy, onClick = { removingMovement = null }) { Text("Cancelar") } })
+    }
     TextButton(enabled = !busy, onClick = { deleting = cycle }) {
         Icon(Icons.Default.DeleteOutline, null)
         Spacer(Modifier.width(8.dp))
