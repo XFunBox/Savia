@@ -156,6 +156,7 @@ fun validateData(data: AppData) {
         require(a.end <= b.start) { "Los ciclos no pueden solaparse." }
     }
     val cycles = data.cycles.associateBy { it.id }
+    val movementsById = data.movements.associateBy { it.id }
     require(data.goals.sumOf { it.entries.size } <= 50000) { "Máximo 50000 entradas de ahorro." }
     val savingsIds = mutableSetOf<String>()
     val allocatedMovementIds = mutableSetOf<String>()
@@ -182,7 +183,7 @@ fun validateData(data: AppData) {
                     "Una aportación de un ingreso extra debe ser adicional y pertenecer a un periodo."
                 }
                 require(allocatedMovementIds.add(movementId)) { "Un ingreso extra solo puede asignarse a una aportación." }
-                val source = requireNotNull(data.movements.find { it.id == movementId }) { "Aportación vinculada a un ingreso inexistente." }
+                val source = requireNotNull(movementsById[movementId]) { "Aportación vinculada a un ingreso inexistente." }
                 val sourceCycle = requireNotNull(cycles[source.cycleId]) { "Movimiento con ciclo inexistente." }
                 require(source.income && source.cycleId == it.cycleId && source.date == it.date && it.amount <= source.amount) {
                     "La aportación vinculada no coincide con su ingreso extra."

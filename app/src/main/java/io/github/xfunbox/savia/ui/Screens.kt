@@ -310,7 +310,12 @@ internal fun Screens(data: AppData, page: Int, today: LocalDate, busy: Boolean,
     }
     MoneyLine("Ingresos extra registrados", summary.income - cycle.income, cycle.currency, Icons.Default.SouthWest)
     if (extraIncomeByCategory.isEmpty()) Text("Aún no has registrado ingresos extra en este periodo.")
-    extraIncomeByCategory.forEach { (category, total) -> MoneyLine(category, total, cycle.currency, categoryIcon(category)) }
+    var incomeCategoryPage by remember(cycle.id) { mutableIntStateOf(0) }
+    val currentIncomePage = incomeCategoryPage.coerceIn(0, lastPage(extraIncomeByCategory.size))
+    extraIncomeByCategory.drop(currentIncomePage * PAGE_SIZE).take(PAGE_SIZE).forEach { (category, total) ->
+        MoneyLine(category, total, cycle.currency, categoryIcon(category))
+    }
+    Pages(currentIncomePage, extraIncomeByCategory.size) { incomeCategoryPage = it }
     val previousCycle = cycles.firstOrNull { it.currency == cycle.currency && it.end <= cycle.start }
     if (previousCycle != null) {
         val previousSummary = summarize(previousCycle, data.movements, data.goals)

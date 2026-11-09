@@ -23,6 +23,7 @@ class PeriodReviewTest {
         val c = cycle.copy(categoryLimits = mapOf("Comida" to 10000))
         assertFalse(categorySpending(c, listOf(Movement("m", "c", start, 7999, category = "Comida"))).single().nearLimit)
         assertTrue(categorySpending(c, listOf(Movement("m", "c", start, 8000, category = "Comida"))).single().nearLimit)
+        assertTrue(categorySpending(c, listOf(Movement("m", "c", start, 10000, category = "Comida"))).single().nearLimit)
         val exceeded = categorySpending(c, listOf(Movement("m", "c", start, 12000, category = "Comida"))).single()
         assertFalse(exceeded.nearLimit)
         assertEquals(-2000L, exceeded.remaining)

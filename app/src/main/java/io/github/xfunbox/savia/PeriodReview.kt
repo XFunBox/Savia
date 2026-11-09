@@ -8,7 +8,7 @@ import java.util.UUID
 internal fun categoryKey(category: String): String = category.trim().lowercase(Locale.ROOT)
 data class CategoryBudget(val category: String, val limit: Long, val spent: Long) {
     val remaining: Long get() = limit - spent
-    val nearLimit: Boolean get() = limit > 0 && spent < limit && spent * 100 >= limit * 80
+    val nearLimit: Boolean get() = limit > 0 && spent <= limit && spent * 100 >= limit * 80
 }
 fun categorySpending(cycle: Cycle, movements: List<Movement>): List<CategoryBudget> = cycle.categoryLimits.map { (category, limit) ->
     CategoryBudget(category, limit, movements.filter {
