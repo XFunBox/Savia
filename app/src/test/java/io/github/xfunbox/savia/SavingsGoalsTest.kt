@@ -71,11 +71,15 @@ class SavingsGoalsTest {
 
     @Test fun deletingCyclePreservesSavingsAndDetachesTheirAttribution() {
         val entry = SavingsEntry("e", start, 10000, cycleId = first.id, additional = true)
-        val data = AppData(cycles = listOf(first), goals = listOf(goal.copy(entries = listOf(entry))))
+        val income = Movement("income", first.id, start, 20000, income = true)
+        val linked = entry.copy(id = "linked", amount = 5000, sourceMovementId = income.id)
+        val data = AppData(cycles = listOf(first), movements = listOf(income),
+            goals = listOf(goal.copy(entries = listOf(entry, linked))))
         val deleted = deleteCycle(data, first.id)
-        assertEquals(listOf(entry.copy(cycleId = null)), deleted.goals.single().entries)
+        assertEquals(listOf(entry.copy(cycleId = null), linked.copy(cycleId = null, sourceMovementId = null)), deleted.goals.single().entries)
         assertEquals(goalSaved(data.goals.single()), goalSaved(deleted.goals.single()))
-        assertEquals(listOf(entry), data.goals.single().entries)
+        assertEquals(listOf(entry, linked), data.goals.single().entries)
+        assertTrue(deleted.movements.isEmpty())
         validateData(deleted)
     }
 

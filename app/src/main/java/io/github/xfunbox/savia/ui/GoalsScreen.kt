@@ -27,9 +27,10 @@ internal fun GoalsScreen(data: AppData, cycle: Cycle?, busy: Boolean, save: (App
     var removingEntry by remember { mutableStateOf<Pair<SavingsGoal, SavingsEntry>?>(null) }
     var history by remember { mutableStateOf<String?>(null) }
     var pending by remember { mutableStateOf<AppData?>(null) }
+    var sourceMovement by remember { mutableStateOf<Movement?>(null) }
     LaunchedEffect(data, pending) {
         if (pending != null && data == pending) {
-            creating = false; editing = null; deleting = null; entryGoal = null; editingEntry = null; removingEntry = null; pending = null
+            creating = false; editing = null; deleting = null; entryGoal = null; editingEntry = null; removingEntry = null; sourceMovement = null; pending = null
         }
     }
     fun submit(next: AppData) {
@@ -41,7 +42,8 @@ internal fun GoalsScreen(data: AppData, cycle: Cycle?, busy: Boolean, save: (App
     Text("Reparte el ahorro que reservas cada periodo. El progreso refleja lo que tú indiques que ya has ahorrado.", style = MaterialTheme.typography.bodyMedium)
     if (cycle != null) {
         val summary = summarize(cycle, data.movements, data.goals)
-        Card(shape = RoundedCornerShape(24.dp)) {
+        Card(shape = RoundedCornerShape(24.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
+            border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = .22f))) {
             Column(Modifier.fillMaxWidth().padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Amount("Ahorro reservado en este periodo", cycle.target, cycle.currency)
                 MoneyLine("Ahorro previsto al terminar", summary.forecast, cycle.currency)
@@ -64,7 +66,7 @@ internal fun GoalsScreen(data: AppData, cycle: Cycle?, busy: Boolean, save: (App
     data.goals.forEach { goal ->
         val total = goalSaved(goal)
         key(goal.id) {
-            Card(shape = RoundedCornerShape(24.dp)) {
+            Card(shape = RoundedCornerShape(24.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow)) {
                 Column(Modifier.fillMaxWidth().padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     Text(goal.name, style = MaterialTheme.typography.titleLarge)
                     Text("${formatMoney(total, goal.currency)} de ${formatMoney(goal.targetAmount, goal.currency)}", style = MaterialTheme.typography.titleMedium)
@@ -87,9 +89,17 @@ internal fun GoalsScreen(data: AppData, cycle: Cycle?, busy: Boolean, save: (App
                             Text("${entry.date} · ${if (entry.withdrawal) "Retirada" else "Aportación"} · ${formatMoney(entry.amount, goal.currency)}")
                             if (entry.note.isNotBlank()) Text(entry.note, style = MaterialTheme.typography.bodySmall)
                             Text(if (entry.cycleId == null) "Ahorro externo, sin periodo" else if (entry.additional) "Adicional a la reserva del periodo" else "Dentro de la reserva del periodo", style = MaterialTheme.typography.bodySmall)
-                            Row {
-                                TextButton(enabled = !busy, onClick = { entryGoal = goal; editingEntry = entry; withdrawal = entry.withdrawal }) { Text("Corregir") }
-                                TextButton(enabled = !busy, onClick = { removingEntry = goal to entry }) { Text("Eliminar entrada") }
+                            if (entry.sourceMovementId != null) {
+                                Text("Vinculado al ingreso extra. Los cambios del ingreso actualizan esta aportación.",
+                                    style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                TextButton(enabled = !busy, onClick = {
+                                    sourceMovement = data.movements.firstOrNull { it.id == entry.sourceMovementId }
+                                }) { Text("Ver ingreso original") }
+                            } else {
+                                Row {
+                                    TextButton(enabled = !busy, onClick = { entryGoal = goal; editingEntry = entry; withdrawal = entry.withdrawal }) { Text("Corregir") }
+                                    TextButton(enabled = !busy, onClick = { removingEntry = goal to entry }) { Text("Eliminar entrada") }
+                                }
                             }
                         }
                     }
@@ -103,6 +113,15 @@ internal fun GoalsScreen(data: AppData, cycle: Cycle?, busy: Boolean, save: (App
     }
     if (creating || editing != null) GoalForm(editing, data.settings.currency, { creating = false; editing = null; pending = null }) { goal ->
         submit(data.copy(goals = data.goals.filterNot { it.id == goal.id } + goal))
+    }
+    sourceMovement?.let { movement ->
+        val sourceCycle = data.cycles.firstOrNull { it.id == movement.cycleId }
+        if (sourceCycle != null) key(movement.id) {
+            MovementForm(sourceCycle, LocalDate.now(), movement, goals = data.goals,
+                onDismiss = { sourceMovement = null; pending = null }) { corrected, allocation ->
+                submit(saveMovement(data, corrected, allocation))
+            }
+        }
     }
     entryGoal?.let { goal ->
         SavingsEntryForm(goal, data.cycles, cycle, editingEntry, withdrawal, { entryGoal = null; pending = null }) { entry ->

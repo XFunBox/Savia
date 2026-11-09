@@ -74,9 +74,16 @@ private val fullPaymentDate = DateTimeFormatter.ofPattern("d MMM yyyy", Locale.f
             LinearProgressIndicator(progress = {
                 if (item.limit == 0L) { if (item.spent > 0L) 1f else 0f } else (item.spent.toFloat() / item.limit).coerceIn(0f, 1f)
             }, modifier = Modifier.fillMaxWidth().height(8.dp).semantics { contentDescription = "${item.category}: ${formatMoney(item.spent, cycle.currency)} de ${formatMoney(item.limit, cycle.currency)}" },
-                color = if (item.remaining < 0) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.secondary)
-            Text(if (item.remaining < 0) "Superado en ${formatMoney(-item.remaining, cycle.currency)}" else "Restante: ${formatMoney(item.remaining, cycle.currency)}",
-                color = if (item.remaining < 0) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant,
+                color = when { item.remaining < 0 -> MaterialTheme.colorScheme.error; item.nearLimit -> MaterialTheme.colorScheme.tertiary; else -> MaterialTheme.colorScheme.secondary })
+            Text(when {
+                item.remaining < 0 -> "Superado en ${formatMoney(-item.remaining, cycle.currency)}"
+                item.nearLimit -> "Aviso: ya has usado al menos el 80 % del límite. Quedan ${formatMoney(item.remaining, cycle.currency)}"
+                else -> "Restante: ${formatMoney(item.remaining, cycle.currency)}"
+            }, color = when {
+                item.remaining < 0 -> MaterialTheme.colorScheme.error
+                item.nearLimit -> MaterialTheme.colorScheme.tertiary
+                else -> MaterialTheme.colorScheme.onSurfaceVariant
+            },
                 style = MaterialTheme.typography.bodySmall)
         }
     }

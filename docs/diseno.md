@@ -6,14 +6,14 @@ Aplicación para cualquier persona, sin cuenta ni servidor. Registra ingresos, g
 
 Kotlin y Jetpack Compose nativos, Android 12 o posterior. Se eligen para el destino Android pedido. Flutter sería útil si se añadiera iOS; una web empaquetada añadiría una capa que este alcance no necesita. Datos en almacenamiento privado con escrituras atómicas, sin permiso de Internet ni copia automática en nube. Copias manuales JSON mediante el selector del sistema.
 
-Cinco destinos: Inicio, Movimientos, Plan, Resúmenes, Ajustes. Interfaz en español, oscura con verde y morado, controles accesibles y desplazamiento con teclado. Sin datos financieros de ejemplo en el estado inicial.
+Cinco destinos: Inicio, Movimientos, Plan, Resúmenes, Ajustes. Interfaz en español, oscura con acentos neón lima y violeta, controles accesibles y desplazamiento con teclado. Sin datos financieros de ejemplo en el estado inicial.
 
 ## Reglas
 
 - Configuración: salario neto, día habitual de cobro (1–31), presupuesto variable estimado, objetivo manual/automático, moneda y lista de gastos fijos.
 - El usuario inicia cada ciclo confirmando ingreso y fechas. El siguiente cobro es un extremo exclusivo. Las fechas se pueden ajustar; no se inventan ingresos automáticamente.
 - Cada ciclo conserva una instantánea de ingreso, fijos, moneda y meta. Cambiar ajustes no reescribe el historial.
-- Gastos variables y otros ingresos registrables con importe, categoría, fecha y nota. Los pagos fijos se marcan pagados creando un movimiento vinculado; no se descuentan dos veces.
+- Gastos variables e ingresos extraordinarios registrables con importe, categoría, fecha y nota. El alta ofrece categorías acordes al tipo de movimiento y permite asignar parte de un ingreso extra a un objetivo. La aportación queda vinculada al ingreso: corregirlo o eliminarlo mantiene los datos sincronizados. Los pagos fijos se marcan pagados creando un movimiento vinculado; no se descuentan dos veces.
 - Sugerencia = máximo de cero e ingreso menos fijos menos presupuesto variable. Se explica la fórmula. El objetivo manual puede exceder la capacidad: se muestra el desfase, sin cambiarlo silenciosamente.
 - Disponible = ingresos registrados del ciclo menos gastos pagados menos fijos pendientes menos meta. Puede ser negativo.
 - Previsión = ingresos menos fijos previstos/pagados menos el mayor entre presupuesto variable y gasto variable registrado. Es una estimación, no ahorro confirmado.
@@ -37,8 +37,8 @@ Un presupuesto común y hasta 100 objetivos independientes, con nombre, moneda, 
 
 Mi presupuesto separa ingresos, gastos fijos, gastos del día a día y ahorro reservado. Muestra el reparto y avisa si los gastos o la reserva exceden la capacidad prevista. Inicio distingue disponible, reserva y previsión; Objetivos está en la navegación principal.
 
-Resumen permite borrar un periodo y exclusivamente sus movimientos, previa confirmación con fechas y número de movimientos. Presupuesto y objetivos se conservan. Las copias pasan a versión 2 e incluyen objetivos; versión 1 sigue admitida y se importa con objetivos vacíos, conservando todos sus datos originales.
+Resumen permite borrar un periodo y exclusivamente sus movimientos, previa confirmación con fechas y número de movimientos. Presupuesto y objetivos se conservan. Las copias v2 añadieron objetivos; la versión 1 sigue admitida y se importa con objetivos vacíos, conservando todos sus datos originales.
 
 ## Desarrollo: historial, calendario y revisión
 
-Las siete mejoras posteriores a 2.1.0 se describen en [desarrollo-siete-mejoras.md](desarrollo-siete-mejoras.md). El almacenamiento pasa a v4 manteniendo lectura v1–v3. Los saldos anteriores permanecen como saldo inicial, separado de entradas con fecha; no se inventa un historial. Solo ahorro adicional neto reduce el disponible además de la reserva. Vencimientos y límites conservan instantáneas por periodo. Cierres son revisiones explícitas con aportaciones idempotentes; no generan ingresos del siguiente periodo. Preferencias y metadatos de avisos permanecen en el dispositivo, fuera de la copia financiera.
+Las siete mejoras posteriores a 2.1.0 se describen en [desarrollo-siete-mejoras.md](desarrollo-siete-mejoras.md). El almacenamiento conserva lectura de copias v1–v5; v5 vincula aportaciones a ingresos extraordinarios sin alterar copias previas. Los saldos anteriores permanecen como saldo inicial, separado de entradas con fecha; no se inventa un historial. Solo ahorro adicional neto reduce el disponible además de la reserva. Vencimientos y límites conservan instantáneas por periodo; el resumen compara periodos de la misma moneda y desglosa ingresos por origen, y los límites avisan al alcanzar el 80 %. Cierres son revisiones explícitas con aportaciones idempotentes; no generan ingresos del siguiente periodo. Preferencias y metadatos de avisos permanecen en el dispositivo, fuera de la copia financiera.

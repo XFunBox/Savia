@@ -100,7 +100,7 @@ fun deleteCycle(data: AppData, cycleId: String): AppData {
         closures = data.closures.filterNot { it.cycleId == cycleId },
         movements = data.movements.filterNot { it.cycleId == cycleId },
         goals = data.goals.map { goal -> goal.copy(entries = goal.entries.map {
-            if (it.cycleId == cycleId) it.copy(cycleId = null) else it
+            if (it.cycleId == cycleId) it.copy(cycleId = null, sourceMovementId = null) else it
         }) })
 }
 
@@ -156,8 +156,10 @@ fun validateData(data: AppData) {
         require(a.end <= b.start) { "Los ciclos no pueden solaparse." }
     }
     val cycles = data.cycles.associateBy { it.id }
+    val movementsById = data.movements.associateBy { it.id }
     require(data.goals.sumOf { it.entries.size } <= 50000) { "Máximo 50000 entradas de ahorro." }
     val savingsIds = mutableSetOf<String>()
+    val allocatedMovementIds = mutableSetOf<String>()
     data.goals.forEach { goal ->
         goal.targetDate?.let { require(it.year in 1900..9999) { "Fecha objetivo fuera de límite (1900 a 9999)." } }
         var balance = goal.savedAmount
@@ -174,6 +176,21 @@ fun validateData(data: AppData) {
                 val cycle = requireNotNull(cycles[cycleId]) { "Entrada de ahorro con periodo inexistente." }
                 require(cycle.currency == goal.currency) { "La moneda del objetivo y del periodo deben coincidir." }
                 require(it.date >= cycle.start && it.date < cycle.end) { "La fecha del ahorro debe estar dentro del periodo." }
+            }
+            it.sourceMovementId?.let { movementId ->
+                id(movementId)
+                require(!it.withdrawal && it.additional && it.cycleId != null) {
+                    "Una aportación de un ingreso extra debe ser adicional y pertenecer a un periodo."
+                }
+                require(allocatedMovementIds.add(movementId)) { "Un ingreso extra solo puede asignarse a una aportación." }
+                val source = requireNotNull(movementsById[movementId]) { "Aportación vinculada a un ingreso inexistente." }
+                val sourceCycle = requireNotNull(cycles[source.cycleId]) { "Movimiento con ciclo inexistente." }
+                require(source.income && source.cycleId == it.cycleId && source.date == it.date && it.amount <= source.amount) {
+                    "La aportación vinculada no coincide con su ingreso extra."
+                }
+                require(sourceCycle.currency == goal.currency) {
+                    "La moneda de la aportación y del ingreso extra debe coincidir."
+                }
             }
             balance += if (it.withdrawal) -it.amount else it.amount
             require(balance in 0..MAX_MONEY) { "El saldo del objetivo queda fuera de límite en su historial." }

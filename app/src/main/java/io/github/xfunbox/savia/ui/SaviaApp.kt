@@ -6,6 +6,9 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.material3.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -14,7 +17,10 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Flag
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.PieChart
+import androidx.compose.material.icons.filled.Remove
+import androidx.compose.material.icons.filled.Savings
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.SouthWest
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
@@ -44,6 +50,8 @@ fun SaviaApp(reminderDestination: String? = null, reminderRequestId: Int = 0) {
     var notice by remember { mutableStateOf<String?>(null) }
     var page by remember { mutableIntStateOf(0) }
     var addRequest by remember { mutableIntStateOf(0) }
+    var newMovementIsIncome by remember { mutableStateOf(false) }
+    var addMenuExpanded by remember { mutableStateOf(false) }
     var openBackup by remember { mutableStateOf(false) }
     LaunchedEffect(reminderDestination, reminderRequestId, data != null) {
         if (data != null && reminderDestination != null) {
@@ -145,28 +153,88 @@ fun SaviaApp(reminderDestination: String? = null, reminderRequestId: Int = 0) {
     }
     LaunchedEffect(Unit) { load() }
     MaterialTheme(colorScheme = darkColorScheme(
-        primary = Color(0xFFB3FF66), secondary = Color(0xFFB59AFF),
-        primaryContainer = Color(0xFF243824), onPrimaryContainer = Color(0xFFE2FFD2),
-        secondaryContainer = Color(0xFF2D2543), onSecondaryContainer = Color(0xFFEEE1FF),
-        background = Color(0xFF101014), surface = Color(0xFF19191F),
-        surfaceVariant = Color(0xFF262731), onSurfaceVariant = Color(0xFFBFC1CD),
-        onBackground = Color(0xFFF3F3F8), onSurface = Color(0xFFF3F3F8),
-        onPrimary = Color(0xFF152000), error = Color(0xFFFFB4AB)
+        primary = Color(0xFFC6FF00), onPrimary = Color(0xFF182000),
+        primaryContainer = Color(0xFF26330D), onPrimaryContainer = Color(0xFFE8FF9A),
+        secondary = Color(0xFFB69AFF), onSecondary = Color(0xFF251344),
+        secondaryContainer = Color(0xFF302448), onSecondaryContainer = Color(0xFFEDE3FF),
+        tertiary = Color(0xFF7EE7B1), onTertiary = Color(0xFF073923),
+        error = Color(0xFFFF7891), onError = Color(0xFF4A0015),
+        background = Color(0xFF0B0C12), onBackground = Color(0xFFF3F0FA),
+        surface = Color(0xFF13141C), onSurface = Color(0xFFF3F0FA),
+        surfaceVariant = Color(0xFF211F2B), onSurfaceVariant = Color(0xFFC2BDCE),
+        surfaceContainerLowest = Color(0xFF0E0F15), surfaceContainerLow = Color(0xFF171821),
+        surfaceContainer = Color(0xFF1D1D27), surfaceContainerHigh = Color(0xFF262432),
+        surfaceContainerHighest = Color(0xFF302D3B), outline = Color(0xFF514B60),
+        outlineVariant = Color(0xFF353241), inverseSurface = Color(0xFFEAE5F2),
+        inverseOnSurface = Color(0xFF292631), inversePrimary = Color(0xFF526B00)
     ), shapes = Shapes(small = RoundedCornerShape(12.dp), medium = RoundedCornerShape(20.dp), large = RoundedCornerShape(28.dp))) {
-        Scaffold(snackbarHost = { SnackbarHost(snackbar) },
-            topBar = { TopAppBar(title = { Text(when(page) { 1 -> "Movimientos"; 2 -> "Objetivos"; 3 -> "Resumen"; 4 -> "Mi presupuesto"; else -> "Savia" }, fontWeight = FontWeight.Bold) },
+        Scaffold(
+            modifier = Modifier.fillMaxSize().drawBehind {
+                drawRect(Brush.verticalGradient(listOf(Color(0xFF10111A), Color(0xFF0B0C12), Color(0xFF100D18))))
+                drawCircle(
+                    Brush.radialGradient(listOf(Color(0x337F5CFF), Color.Transparent), center = Offset(size.width, 0f), radius = size.width * .8f),
+                    radius = size.width * .8f, center = Offset(size.width, 0f)
+                )
+                drawCircle(
+                    Brush.radialGradient(listOf(Color(0x1FC6FF00), Color.Transparent), center = Offset(0f, size.height * .58f), radius = size.width * .7f),
+                    radius = size.width * .7f, center = Offset(0f, size.height * .58f)
+                )
+            },
+            containerColor = Color.Transparent,
+            snackbarHost = { SnackbarHost(snackbar) },
+            topBar = { TopAppBar(
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent),
+                title = {
+                    Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                        Icon(Icons.Default.Savings, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
+                        Text(when(page) { 1 -> "Movimientos"; 2 -> "Objetivos"; 3 -> "Resumen"; 4 -> "Mi presupuesto"; else -> "Savia" }, fontWeight = FontWeight.Bold)
+                    }
+                },
                 navigationIcon = { if (page == 4) IconButton(onClick = { page = 0 }) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Volver al inicio") } },
-                actions = { if (page != 4 && data != null) IconButton(onClick = { page = 4 }) { Icon(Icons.Default.Settings, "Mi presupuesto") } }) },
+                actions = { if (page != 4 && data != null) IconButton(onClick = { page = 4 }) { Icon(Icons.Default.Settings, "Mi presupuesto") } }
+            ) },
             floatingActionButton = {
                 val latest = data?.cycles?.maxByOrNull { it.start }
-                if (latest != null && !busy && (page == 0 || page == 1)) ExtendedFloatingActionButton(
-                    onClick = { if (!busy) { page = 1; addRequest++ } },
-                    icon = { Icon(Icons.Default.Add, null) }, text = { Text("Añadir gasto") })
+                if (latest != null && !busy && (page == 0 || page == 1)) Box {
+                    ExtendedFloatingActionButton(
+                        containerColor = MaterialTheme.colorScheme.primary,
+                        contentColor = MaterialTheme.colorScheme.onPrimary,
+                        elevation = FloatingActionButtonDefaults.elevation(defaultElevation = 8.dp, focusedElevation = 10.dp, pressedElevation = 4.dp),
+                        onClick = { if (!busy) addMenuExpanded = true },
+                        icon = { Icon(Icons.Default.Add, null) }, text = { Text("Añadir movimiento") })
+                    DropdownMenu(expanded = addMenuExpanded, onDismissRequest = { addMenuExpanded = false }) {
+                        DropdownMenuItem(text = { Text("Añadir gasto") }, leadingIcon = { Icon(Icons.Default.Remove, null) },
+                            onClick = {
+                                addMenuExpanded = false
+                                newMovementIsIncome = false
+                                page = 1
+                                addRequest++
+                            })
+                        DropdownMenuItem(text = { Text("Añadir ingreso extra") }, leadingIcon = { Icon(Icons.Default.SouthWest, null) },
+                            onClick = {
+                                addMenuExpanded = false
+                                newMovementIsIncome = true
+                                page = 1
+                                addRequest++
+                            })
+                    }
+                }
             }, bottomBar = {
-            if (data != null && page != 4) NavigationBar(containerColor = MaterialTheme.colorScheme.background) {
+            if (data != null && page != 4) NavigationBar(
+                containerColor = MaterialTheme.colorScheme.surfaceContainerLowest.copy(alpha = .94f),
+                tonalElevation = 0.dp
+            ) {
                 listOf(0 to "Inicio", 1 to "Movimientos", 2 to "Objetivos", 3 to "Resumen").forEach { (index, title) ->
                     NavigationBarItem(selected = page == index, onClick = { page = index },
-                        icon = { Icon(when(index) { 1 -> Icons.AutoMirrored.Filled.ReceiptLong; 2 -> Icons.Default.Flag; 3 -> Icons.Default.PieChart; else -> Icons.Default.Home }, null) }, label = { Text(title) })
+                        icon = { Icon(when(index) { 1 -> Icons.AutoMirrored.Filled.ReceiptLong; 2 -> Icons.Default.Flag; 3 -> Icons.Default.PieChart; else -> Icons.Default.Home }, null) },
+                        label = { Text(title) },
+                        colors = NavigationBarItemDefaults.colors(
+                            selectedIconColor = MaterialTheme.colorScheme.primary,
+                            selectedTextColor = MaterialTheme.colorScheme.secondary,
+                            indicatorColor = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = .75f),
+                            unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                            unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant
+                        ))
                 }
             }
         }) { padding ->
@@ -190,7 +258,7 @@ fun SaviaApp(reminderDestination: String? = null, reminderRequestId: Int = 0) {
                             onSettings = { page = 4 },
                             onExport = { export.launch("ahorro-${LocalDate.now()}.json") },
                             onImport = { import.launch(arrayOf("application/json", "text/plain", "application/octet-stream")) },
-                            addRequest = addRequest, onPlan = { page = 2 }, openBackup = openBackup)
+                            addRequest = addRequest, addIncome = newMovementIsIncome, onPlan = { page = 2 }, openBackup = openBackup)
                         }
                     }
                 }
