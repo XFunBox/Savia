@@ -41,7 +41,8 @@ object Backup {
                     goal.entries.forEach {
                         put(JSONObject().put("id", it.id).put("date", it.date.toString()).put("amount", it.amount)
                             .put("withdrawal", it.withdrawal).put("note", it.note)
-                            .put("cycleId", it.cycleId ?: JSONObject.NULL).put("additional", it.additional))
+                            .put("cycleId", it.cycleId ?: JSONObject.NULL).put("additional", it.additional)
+                            .put("sourceMovementId", it.sourceMovementId ?: JSONObject.NULL))
                     }
                 }
                 put(JSONObject().put("id", goal.id).put("name", goal.name).put("targetAmount", goal.targetAmount)
@@ -53,7 +54,7 @@ object Backup {
             data.closures.forEach { put(JSONObject().put("cycleId", it.cycleId).put("reviewedOn", it.reviewedOn.toString())
                 .put("fingerprint", it.fingerprint).put("entryIds", JSONArray(it.entryIds))) }
         }
-        val result = JSONObject().put("version", 4).put("settings", settings)
+        val result = JSONObject().put("version", 5).put("settings", settings)
             .put("cycles", cycles).put("movements", movements).put("goals", goals).put("closures", closures).toString()
         checkSize(result)
         return result
@@ -67,7 +68,7 @@ object Backup {
                 ?: throw IllegalArgumentException("La copia debe contener un objeto JSON.")
             require(tokener.nextClean() == '\u0000') { "Hay contenido adicional después de la copia." }
             val version = root.number("version")
-            require(version in 1L..4L) { "Versión de copia no admitida." }
+            require(version in 1L..5L) { "Versión de copia no admitida." }
             val s = root.getJSONObject("settings")
             val settings = Settings(s.number("salary"), s.number("payday").also {
                 require(it in 1..31) { "El día de cobro debe estar entre 1 y 31." }
@@ -89,9 +90,14 @@ object Backup {
             val goals = if (version == 1L) emptyList() else root.getJSONArray("goals").objects(100).map {
                 val entries = if (version < 3L) emptyList() else it.getJSONArray("entries").objects(50000).map { entry ->
                     require(entry.has("cycleId")) { "Falta el campo cycleId." }
+                    val sourceMovementId = if (version < 5L) null else {
+                        require(entry.has("sourceMovementId")) { "Falta el campo sourceMovementId." }
+                        if (entry.isNull("sourceMovementId")) null else entry.string("sourceMovementId")
+                    }
                     SavingsEntry(entry.string("id"), LocalDate.parse(entry.string("date")), entry.number("amount"),
                         entry.boolean("withdrawal"), entry.string("note"),
-                        if (entry.isNull("cycleId")) null else entry.string("cycleId"), entry.boolean("additional"))
+                        if (entry.isNull("cycleId")) null else entry.string("cycleId"), entry.boolean("additional"),
+                        sourceMovementId)
                 }
                 if (version >= 3L) require(it.has("targetDate")) { "Falta el campo targetDate." }
                 val targetDate = if (version < 3L || it.isNull("targetDate")) null else LocalDate.parse(it.string("targetDate"))

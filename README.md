@@ -4,19 +4,19 @@ Aplicación Android para organizar gastos y ahorrar, sin cuenta y con los datos 
 
 ## Descargar e instalar
 
-**[Descargar Savia 2.2.0 desde Releases](https://github.com/XFunBox/Savia/releases/tag/v2.2.0)**
+**[Descargar Savia 2.3.0 desde Releases](https://github.com/XFunBox/Savia/releases/tag/v2.3.0)**
 
-[Descarga directa de Savia 2.2.0](https://github.com/XFunBox/Savia/releases/download/v2.2.0/Savia-2.2.0.apk)
+[Descarga directa de Savia 2.3.0](https://github.com/XFunBox/Savia/releases/download/v2.3.0/Savia-2.3.0.apk)
 
-1. Descarga `Savia-2.2.0.apk` desde Releases o desde el enlace directo.
+1. Descarga `Savia-2.3.0.apk` desde Releases o desde el enlace directo.
 2. Abre la APK y, si Android lo solicita, permite instalar aplicaciones desde ese navegador o gestor de archivos.
 3. Abre **Savia**, configura Mi presupuesto y crea el primer periodo desde Inicio.
 
-Requiere **Android 12 o posterior**. La versión 2.2.0 reúne las siete mejoras de planificación y ahorro. Sendoa confirma su validación en teléfono el 6 de noviembre de 2026. Pruebas, compilación, lint y firma se comprueban en la publicación.
+Requiere **Android 12 o posterior**. La versión 2.3.0 añade ingresos vinculados a objetivos, filtros de movimientos y comparación entre periodos. Pruebas, compilación, lint y firma se comprueban en la publicación.
 
-### Actualización desde Savia 2.1.0
+### Actualización desde Savia 2.1.0 o 2.2.0
 
-Exporta una copia JSON y guárdala fuera de la app. Instala la APK 2.2.0 sobre la anterior: conserva el identificador y la firma definitiva. No hace falta desinstalar. Las copias nuevas incluyen el historial y las revisiones; no pueden importarse en versiones antiguas.
+Exporta una copia JSON y guárdala fuera de la app. Instala la APK 2.3.0 sobre la anterior: conserva el identificador y la firma definitiva. No hace falta desinstalar. Las copias nuevas incluyen el historial y las revisiones; no pueden importarse en versiones antiguas.
 
 ### Actualización desde Savia 2.0.0 de pruebas
 
@@ -32,7 +32,14 @@ Savia tiene un identificador Android nuevo, así que se instala como una aplicac
 
 Las copias JSON no están cifradas. No desinstales Ahorro hasta comprobar la importación en Savia.
 
-## Novedades de 2.2.0
+## Novedades de 2.3.0
+
+- Ingresos extra asignables a objetivos y acceso al ingreso original desde su aportación.
+- Filtros Todos, Gastos e Ingresos combinados con la búsqueda.
+- Comparación entre periodos de la misma moneda y avisos al alcanzar el 80 % de un límite.
+- Interfaz oscura renovada y copias v5 compatibles con formatos anteriores.
+
+## Planificación y ahorro
 
 - Aportaciones y retiradas con historial, corrección y fecha opcional de meta.
 - Sugerencia de aportación por cobros y guía para preparar el presupuesto.
@@ -45,9 +52,11 @@ Las copias JSON no están cifradas. No desinstales Ahorro hasta comprobar la imp
 
 - Salario neto, gastos fijos y fechas de cobro configurables.
 - Registro de gastos e ingresos durante cada periodo.
+- Asignación opcional de ingresos extra a objetivos, con aportaciones vinculadas.
 - Presupuestos de cobro a cobro.
 - Ahorro reservado manual o sugerido y varios objetivos independientes, con explicación del cálculo.
 - Resúmenes por periodo y categorías.
+- Comparación entre periodos e ingresos desglosados por origen; avisos al acercarse a los límites.
 - Funcionamiento local y copias de seguridad manuales.
 
 Capturas con datos ficticios: [Inicio](docs/capturas/inicio-0.2.png), [Añadir gasto](docs/capturas/gasto-0.2.png), [Resumen](docs/capturas/resumen-0.2.png), [Búsqueda](docs/capturas/busqueda-1.0.png) y [Repetir gasto](docs/capturas/repetir-1.0.png).
@@ -67,7 +76,7 @@ El material de firma no se incluye en el repositorio.
 ## Documentación
 
 - [Diseño y alcance](docs/diseno.md).
-- [Cambios de Savia 2.2.0](docs/cambios-2.2.0.md).
+- [Cambios de Savia 2.3.0](docs/cambios-2.3.0.md).
 - [Cambios de Savia 2.1.0](docs/cambios-2.1.0.md).
 - [Cambios anteriores de Savia 2.0.0](docs/notas-version-2.0.md).
 - [Firma y publicación de actualizaciones](docs/publicacion.md).

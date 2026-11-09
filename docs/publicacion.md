@@ -39,10 +39,11 @@ en el repositorio ni introducir contraseñas en el historial:
 ```bash
 export ANDROID_HOME=/ruta/al/Android/Sdk
 bash gradlew --no-daemon testDebugUnitTest assembleRelease lintRelease
-bash scripts/verificar-apk.sh app/build/outputs/apk/release/app-release.apk 2.0.1
+bash scripts/verificar-apk.sh app/build/outputs/apk/release/app-release.apk 2.3.0
 ```
 
-El ejemplo supone haber incrementado la versión a 2.0.1 y el código a 5.
+La versión preparada es 2.3.0 con `versionCode` 7. El verificador rechaza
+códigos anteriores o iguales a 6, usados por Savia 2.2.0.
 El verificador necesita `ANDROID_HOME` (o `ANDROID_SDK_ROOT`), incluso si
 Gradle localiza el SDK mediante `local.properties`.
 Sin variables de firma se puede compilar una APK sin firmar para inspección;
@@ -75,14 +76,14 @@ el archivo temporal con permisos restringidos y lo elimina al terminar.
 
 ## Publicar una versión
 
-1. En `app/build.gradle.kts`, cambia `versionName` (por ejemplo, `2.0.1`) e
-   incrementa `versionCode` por encima del de **todas** las APK ya distribuidas.
-   Savia 2.0.0 usa el código 4. Conserva `applicationId`.
+1. En `app/build.gradle.kts`, cambia `versionName` e incrementa `versionCode`
+   por encima del de **todas** las APK ya distribuidas. Savia 2.3.0 usa el
+   código 7. Conserva `applicationId`.
 2. Integra los cambios revisados en `main` con las comprobaciones en verde.
 3. Crea y sube una etiqueta `vX.Y.Z` que coincida con `versionName`.
 4. Actions ejecuta pruebas unitarias, compila debug y ejecuta lint. Después
    compila release, ejecuta su lint y verifica firma criptográfica, certificado,
-   identificador, versión y código superior al de 2.0.0. El incremento respecto
+   identificador, versión y código superior al de 2.2.0. El incremento respecto
    a versiones posteriores se revisa antes de etiquetar.
 5. Solo entonces publica `Savia-X.Y.Z.apk` y su suma SHA-256 en Releases, con
    notas generadas. Una versión ya publicada no se sobrescribe.

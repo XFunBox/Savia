@@ -4,7 +4,8 @@ import java.time.LocalDate
 
 data class SavingsEntry(
     val id: String, val date: LocalDate, val amount: Long, val withdrawal: Boolean = false,
-    val note: String = "", val cycleId: String? = null, val additional: Boolean = false
+    val note: String = "", val cycleId: String? = null, val additional: Boolean = false,
+    val sourceMovementId: String? = null
 )
 
 data class SavingsGoal(
@@ -20,6 +21,10 @@ fun goalSaved(goal: SavingsGoal): Long = goal.savedAmount + goal.entries.sumOf {
 
 fun putSavingsEntry(data: AppData, goalId: String, entry: SavingsEntry): AppData {
     require(data.goals.any { it.id == goalId }) { "El objetivo ya no existe." }
+    require(entry.sourceMovementId == null) { "Las aportaciones de un ingreso extra se registran desde Movimientos." }
+    require(data.goals.flatMap { it.entries }.none { it.id == entry.id && it.sourceMovementId != null }) {
+        "Corrige la aportación vinculada desde el ingreso extra."
+    }
     return data.copy(goals = data.goals.map { goal ->
         if (goal.id != goalId) goal else {
             val index = goal.entries.indexOfFirst { it.id == entry.id }
@@ -31,7 +36,8 @@ fun putSavingsEntry(data: AppData, goalId: String, entry: SavingsEntry): AppData
 
 fun removeSavingsEntry(data: AppData, goalId: String, entryId: String): AppData {
     val goal = requireNotNull(data.goals.find { it.id == goalId }) { "El objetivo ya no existe." }
-    require(goal.entries.any { it.id == entryId }) { "La entrada ya no existe." }
+    val entry = requireNotNull(goal.entries.find { it.id == entryId }) { "La entrada ya no existe." }
+    require(entry.sourceMovementId == null) { "Elimina el ingreso extra vinculado desde Movimientos." }
     return data.copy(goals = data.goals.map {
         if (it.id == goalId) it.copy(entries = it.entries.filterNot { entry -> entry.id == entryId }) else it
     }).also(::validateData)

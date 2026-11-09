@@ -55,6 +55,19 @@ class BudgetTest {
         assertEquals(0, suggestedTarget(Settings(salary = 100, variableBudget = 200)))
     }
 
+    @Test fun extraIncomeIncreasesAvailableAndForecastWithoutCountingAsSpending() {
+        val c = cycle()
+        val extra = Movement("extra", c.id, start, 12345, income = true, category = "Trabajo extra")
+        val baseline = summarize(c, emptyList())
+        val withExtra = summarize(c, listOf(extra))
+
+        assertEquals(baseline.income + extra.amount, withExtra.income)
+        assertEquals(baseline.available + extra.amount, withExtra.available)
+        assertEquals(baseline.forecast + extra.amount, withExtra.forecast)
+        assertEquals(baseline.spent, withExtra.spent)
+        assertEquals(baseline.variableSpent, withExtra.variableSpent)
+    }
+
     @Test fun newCyclePreservesSnapshots() {
         val settings = Settings(salary = 100000, variableBudget = 20000, fixedExpenses = listOf(bill))
         val created = newCycle(settings, start, end)

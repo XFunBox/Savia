@@ -8,6 +8,7 @@ import java.util.UUID
 internal fun categoryKey(category: String): String = category.trim().lowercase(Locale.ROOT)
 data class CategoryBudget(val category: String, val limit: Long, val spent: Long) {
     val remaining: Long get() = limit - spent
+    val nearLimit: Boolean get() = limit > 0 && spent < limit && spent * 100 >= limit * 80
 }
 fun categorySpending(cycle: Cycle, movements: List<Movement>): List<CategoryBudget> = cycle.categoryLimits.map { (category, limit) ->
     CategoryBudget(category, limit, movements.filter {
@@ -24,7 +25,14 @@ private fun reviewFingerprint(data: AppData, cycle: Cycle): String {
         data.movements.filter { it.cycleId == cycle.id }.sortedBy { it.id }.forEach { append(it) }
         data.goals.sortedBy { it.id }.forEach { goal ->
             val entries = goal.entries.filter { it.cycleId == cycle.id }.sortedBy { it.id }
-            if (entries.isNotEmpty()) { append(goal.id); append(goal.currency); entries.forEach { append(it) } }
+            if (entries.isNotEmpty()) {
+                append(goal.id); append(goal.currency)
+                entries.forEach { entry ->
+                    append("SavingsEntry(id=${entry.id}, date=${entry.date}, amount=${entry.amount}, withdrawal=${entry.withdrawal}, note=${entry.note}, cycleId=${entry.cycleId}, additional=${entry.additional}")
+                    entry.sourceMovementId?.let { append(", sourceMovementId=$it") }
+                    append(")")
+                }
+            }
         }
     }
     return MessageDigest.getInstance("SHA-256").digest(relevant.toByteArray(Charsets.UTF_8))

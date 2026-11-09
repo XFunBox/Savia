@@ -32,19 +32,19 @@ STUB
 cat > "$ANDROID_HOME/build-tools/36.0.0/aapt" <<'STUB'
 #!/usr/bin/env bash
 id=io.github.xfunbox.savia
-version=2.0.1
-code=5
+version=2.3.0
+code=7
 case "${CASE:-}" in
   wrong-package) id=otra.app ;;
-  wrong-version) version=2.0.2 ;;
-  old-code) code=4 ;;
+  wrong-version) version=2.3.1 ;;
+  old-code) code=6 ;;
 esac
 echo "package: name='$id' versionCode='$code' versionName='$version'"
 STUB
 chmod +x "$ANDROID_HOME/build-tools/36.0.0/"{aapt,apksigner}
-bash "$root/scripts/verificar-apk.sh" prueba.apk 2.0.1
+bash "$root/scripts/verificar-apk.sh" prueba.apk 2.3.0
 for scenario in unsigned wrong-key historical-key missing-certificate wrong-package wrong-version old-code; do
-  if CASE="$scenario" bash "$root/scripts/verificar-apk.sh" prueba.apk 2.0.1 > "$temporary/result" 2>&1; then
+  if CASE="$scenario" bash "$root/scripts/verificar-apk.sh" prueba.apk 2.3.0 > "$temporary/result" 2>&1; then
     echo "ERROR: se ha aceptado el caso $scenario"
     exit 1
   fi

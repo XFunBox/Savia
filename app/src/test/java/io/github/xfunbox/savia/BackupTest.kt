@@ -16,13 +16,13 @@ class BackupTest {
             listOf(SavingsGoal("trip", "Viaje", 123456, 23456, 1234, "USD"),
                 SavingsGoal("done", "Completado", 1, MAX_MONEY, 0, "EUR")))
         val encoded = Backup.encode(data)
-        assertEquals(4, JSONObject(encoded).getInt("version"))
+        assertEquals(5, JSONObject(encoded).getInt("version"))
         assertEquals(data, Backup.decode(encoded))
     }
 
     @Test fun rejectsMalformedUnknownOversizedAndLossyNumbers() {
         val valid = Backup.encode(AppData())
-        listOf("not json", JSONObject(valid).put("version", 5).toString(), " ".repeat(5 * 1024 * 1024 + 1),
+        listOf("not json", JSONObject(valid).put("version", 6).toString(), " ".repeat(5 * 1024 * 1024 + 1),
             JSONObject(valid).also { it.getJSONObject("settings").put("salary", 1.5) }.toString(),
             JSONObject(valid).also { it.getJSONObject("settings").put("payday", "1") }.toString(),
             JSONObject(valid).also { it.getJSONObject("settings").put("automaticTarget", "true") }.toString(),
@@ -127,7 +127,32 @@ class BackupTest {
         }
         invalid.forEach { assertThrows(IllegalArgumentException::class.java) { Backup.decode(it) } }
     }
-    @Test fun versionFourPreservesSchedulesLimitsAndRejectsLossyNewFields() {
+
+    @Test fun versionFivePreservesIncomeAllocationsAndRejectsBrokenLinks() {
+        val date = LocalDate.of(2026, 1, 1)
+        val cycle = Cycle("c", date, date.plusMonths(1), income = 10000)
+        val movement = Movement("m", cycle.id, date, 5000, income = true, category = "Venta")
+        val entry = SavingsEntry("e", date, 2000, note = "Asignado desde ingreso extra",
+            cycleId = cycle.id, additional = true, sourceMovementId = movement.id)
+        val data = AppData(cycles = listOf(cycle), movements = listOf(movement),
+            goals = listOf(SavingsGoal("g", "Meta", 10000, entries = listOf(entry))))
+        val encoded = Backup.encode(data)
+        assertEquals(data, Backup.decode(encoded))
+
+        val missingLink = JSONObject(encoded).apply {
+            getJSONArray("goals").getJSONObject(0).getJSONArray("entries").getJSONObject(0).remove("sourceMovementId")
+        }.toString()
+        assertThrows(IllegalArgumentException::class.java) { Backup.decode(missingLink) }
+        assertThrows(IllegalArgumentException::class.java) {
+            validateData(data.copy(movements = listOf(movement.copy(amount = 1000))))
+        }
+        val versionFour = JSONObject(encoded).put("version", 4).apply {
+            getJSONArray("goals").getJSONObject(0).getJSONArray("entries").getJSONObject(0).remove("sourceMovementId")
+        }
+        assertNull(Backup.decode(versionFour.toString()).goals.single().entries.single().sourceMovementId)
+    }
+
+    @Test fun versionFivePreservesSchedulesLimitsAndRejectsLossyNewFields() {
         val start = LocalDate.parse("2026-01-01")
         val settings = Settings(salary = 100000, fixedExpenses = listOf(FixedExpense("b", "Seguro", 10000, 31, 1)),
             categoryLimits = mapOf("Comida" to 10000))

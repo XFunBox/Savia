@@ -120,21 +120,46 @@ internal val LocalFormSaveError = compositionLocalOf<String?> { null }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
-@Composable internal fun MovementForm(cycle: Cycle, today: LocalDate, previous: Movement?, onDismiss: () -> Unit, isCopy: Boolean = false, onSave: (Movement) -> Unit) {
+@Composable internal fun MovementForm(cycle: Cycle, today: LocalDate, previous: Movement?, onDismiss: () -> Unit,
+    isCopy: Boolean = false, initialIncome: Boolean = false, goals: List<SavingsGoal> = emptyList(),
+    onSave: (Movement, IncomeAllocation?) -> Unit) {
     val busy = LocalFormBusy.current
     val currentBusy by rememberUpdatedState(busy)
-    val categories = listOf("Comida", "Transporte", "Casa", "Ocio", "Salud", "Compras", "Otros")
+    val expenseCategories = listOf("Comida", "Transporte", "Casa", "Ocio", "Salud", "Compras", "Otros")
+    val incomeCategories = listOf("Trabajo extra", "Venta", "Regalo", "Reembolso", "Otros")
+    val eligibleGoals = goals.filter { it.currency == cycle.currency }
+    val previousAllocation = remember(previous?.id, goals) {
+        previous?.let { movement -> goals.firstNotNullOfOrNull { goal ->
+            goal.entries.firstOrNull { it.sourceMovementId == movement.id }?.let { goal to it }
+        } }
+    }
     var amount by remember { mutableStateOf(previous?.let { inputMoney(it.amount) } ?: "") }
     var movementDate by remember { mutableStateOf(previous?.date ?: minOf(today, cycle.end.minusDays(1))) }
-    var income by remember { mutableStateOf(previous?.income ?: false) }
+    var income by remember { mutableStateOf(previous?.income ?: initialIncome) }
+    var allocateIncome by remember(previous?.id) { mutableStateOf(previousAllocation != null) }
+    var selectedGoalId by remember(previous?.id) {
+        mutableStateOf(previousAllocation?.first?.id ?: eligibleGoals.firstOrNull()?.id)
+    }
+    var allocationAmount by remember(previous?.id) {
+        mutableStateOf(previousAllocation?.second?.let { inputMoney(it.amount) } ?: "")
+    }
+    var goalMenuExpanded by remember { mutableStateOf(false) }
+    val categories = if (income) incomeCategories else expenseCategories
     var category by remember { mutableStateOf(previous?.category ?: "Otros") }
-    var customCategory by remember { mutableStateOf(previous != null && previous.category !in categories) }
+    val previousCategories = if (previous?.income == true) incomeCategories else expenseCategories
+    var customCategory by remember { mutableStateOf(previous != null && previous.category !in previousCategories) }
     var note by remember { mutableStateOf(previous?.note ?: "") }
     var showNote by remember { mutableStateOf(!previous?.note.isNullOrEmpty()) }
-    var options by remember { mutableStateOf(previous?.income ?: false) }
     var error by remember { mutableStateOf<String?>(null) }
     val focus = remember { FocusRequester() }
     val keyboard = LocalSoftwareKeyboardController.current
+    fun setIncome(value: Boolean) {
+        if (!busy && income != value) {
+            if (!customCategory) category = "Otros"
+            if (!value) allocateIncome = false
+            income = value
+        }
+    }
     ModalBottomSheet(onDismissRequest = { if (!busy) onDismiss() }, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true, confirmValueChange = { !currentBusy })) {
         Column(Modifier.fillMaxWidth().fillMaxHeight(.95f).imePadding().padding(horizontal = 24.dp).padding(bottom = 16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
             Column(Modifier.weight(1f).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(16.dp)) {
@@ -147,6 +172,50 @@ internal val LocalFormSaveError = compositionLocalOf<String?> { null }
                 textStyle = MaterialTheme.typography.headlineLarge.copy(textAlign = TextAlign.Center), singleLine = true,
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal, imeAction = ImeAction.Done),
                 keyboardActions = KeyboardActions(onDone = { keyboard?.hide() }))
+            OutlinedCard(Modifier.fillMaxWidth()) {
+                Row(Modifier.fillMaxWidth().heightIn(min = 56.dp)
+                    .toggleable(value = income, enabled = !busy, role = Role.Switch, onValueChange = ::setIncome)
+                    .padding(horizontal = 16.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Text(if (income) "Ingreso extra" else "Gasto", Modifier.weight(1f))
+                    Switch(checked = income, onCheckedChange = null, enabled = !busy)
+                }
+            }
+            if (income) {
+                OutlinedCard(Modifier.fillMaxWidth()) {
+                    Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Row(Modifier.fillMaxWidth().heightIn(min = 48.dp)
+                            .toggleable(value = allocateIncome, enabled = !busy && eligibleGoals.isNotEmpty(),
+                                role = Role.Switch, onValueChange = { allocateIncome = it })
+                            .padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Column(Modifier.weight(1f)) {
+                                Text("Asignar parte a un objetivo")
+                                Text("Lo demás queda disponible para gastar.", style = MaterialTheme.typography.bodySmall)
+                            }
+                            Switch(checked = allocateIncome, onCheckedChange = null,
+                                enabled = !busy && eligibleGoals.isNotEmpty())
+                        }
+                        if (eligibleGoals.isEmpty()) {
+                            Text("Crea un objetivo en la misma moneda para poder asignar este ingreso.",
+                                style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        } else if (allocateIncome) {
+                            Box {
+                                OutlinedButton(enabled = !busy, onClick = { goalMenuExpanded = true }, modifier = Modifier.fillMaxWidth()) {
+                                    Text(eligibleGoals.find { it.id == selectedGoalId }?.name ?: "Elige un objetivo")
+                                }
+                                DropdownMenu(expanded = goalMenuExpanded, onDismissRequest = { goalMenuExpanded = false }) {
+                                    eligibleGoals.forEach { goal ->
+                                        DropdownMenuItem(text = { Text(goal.name) }, onClick = {
+                                            selectedGoalId = goal.id
+                                            goalMenuExpanded = false
+                                        })
+                                    }
+                                }
+                            }
+                            Field("Cantidad que asignas (${cycle.currency})", allocationAmount, { allocationAmount = it }, true)
+                        }
+                    }
+                }
+            }
             Text("Categoría", style = MaterialTheme.typography.labelLarge)
             Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 categories.forEach { item -> FilterChip(enabled = !busy, selected = !customCategory && category == item, onClick = { if (!busy) { category = item; customCategory = false } }, label = { Text(item) }, leadingIcon = {
@@ -166,12 +235,6 @@ internal val LocalFormSaveError = compositionLocalOf<String?> { null }
             DateField("Fecha", movementDate, today, { movementDate = it }, minimum = cycle.start, maximum = minOf(today, cycle.end.minusDays(1)))
             TextButton(enabled = !busy, onClick = { if (!busy) showNote = !showNote }, modifier = Modifier.heightIn(min = 48.dp)) { Text(if (showNote) "Ocultar nota" else "Añadir una nota") }
             if (showNote) OutlinedTextField(enabled = !busy, value = note, onValueChange = { if (!busy) note = it }, label = { Text("Nota (opcional)") }, modifier = Modifier.fillMaxWidth(), minLines = 2, maxLines = 4)
-            Accordion("Más opciones", if (income) "Ingreso extra" else "", options, { if (!busy) options = !options }) {
-                Row(Modifier.fillMaxWidth().heightIn(min = 48.dp).toggleable(value = income, enabled = !busy, role = Role.Switch, onValueChange = { if (!busy) income = it }), verticalAlignment = Alignment.CenterVertically) {
-                    Text("Es un ingreso extra", Modifier.weight(1f))
-                    Switch(checked = income, onCheckedChange = null, enabled = !busy)
-                }
-            }
             }
             FormError(error ?: LocalFormSaveError.current)
             Button(enabled = !busy, onClick = {
@@ -180,7 +243,14 @@ internal val LocalFormSaveError = compositionLocalOf<String?> { null }
                     require(movementDate >= cycle.start && movementDate < cycle.end) { "La fecha debe pertenecer al periodo." }
                     require(movementDate <= today) { "No puedes registrar movimientos futuros." }
                     require(category.isNotBlank()) { "Escribe una categoría." }
-                    onSave(Movement(previous?.id ?: UUID.randomUUID().toString(), cycle.id, movementDate, money(amount), income, category.trim(), note.trim(), previous?.billId))
+                    val movementAmount = money(amount)
+                    val allocation = if (allocateIncome) {
+                        require(income) { "Solo puedes asignar un ingreso extra a un objetivo." }
+                        IncomeAllocation(requireNotNull(selectedGoalId) { "Elige un objetivo." }, money(allocationAmount))
+                            .also { require(it.amount <= movementAmount) { "La aportación no puede superar el ingreso." } }
+                    } else null
+                    onSave(Movement(previous?.id ?: UUID.randomUUID().toString(), cycle.id, movementDate,
+                        movementAmount, income, category.trim(), note.trim(), previous?.billId), allocation)
                 } catch (e: Exception) { error = e.message ?: "Revisa los datos." }
             }, modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp)) { Text(if (busy) "Guardando…" else if (income) "Guardar ingreso" else "Guardar gasto") }
         }

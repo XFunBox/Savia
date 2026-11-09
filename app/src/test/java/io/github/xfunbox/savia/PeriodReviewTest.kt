@@ -19,6 +19,30 @@ class PeriodReviewTest {
         assertEquals(10000L, c.categoryLimits["Comida"])
     }
 
+    @Test fun categoryLimitWarnsAtEightyPercentAndAfterItIsExceeded() {
+        val c = cycle.copy(categoryLimits = mapOf("Comida" to 10000))
+        assertFalse(categorySpending(c, listOf(Movement("m", "c", start, 7999, category = "Comida"))).single().nearLimit)
+        assertTrue(categorySpending(c, listOf(Movement("m", "c", start, 8000, category = "Comida"))).single().nearLimit)
+        val exceeded = categorySpending(c, listOf(Movement("m", "c", start, 12000, category = "Comida"))).single()
+        assertFalse(exceeded.nearLimit)
+        assertEquals(-2000L, exceeded.remaining)
+    }
+
+    @Test fun tinyLimitsDoNotWarnBeforeEightyPercent() {
+        assertFalse(CategoryBudget("Comida", 1, 0).nearLimit)
+        assertFalse(CategoryBudget("Comida", 2, 1).nearLimit)
+        assertFalse(CategoryBudget("Comida", 101, 80).nearLimit)
+        assertTrue(CategoryBudget("Comida", 101, 81).nearLimit)
+    }
+
+    @Test fun addingIncomeLinkMetadataDoesNotInvalidateExistingSavingsReviews() {
+        val entry = SavingsEntry("e", start.plusDays(1), 1000, cycleId = cycle.id)
+        val withEntry = data.copy(goals = listOf(data.goals.single().copy(entries = listOf(entry))))
+        val oldClosure = PeriodClosure(cycle.id, cycle.end, "ba9a031840f1fdc97f4dc6851a33f555958c545af6fee857608cc74021042aef")
+
+        assertFalse(periodReviewChanged(withEntry.copy(closures = listOf(oldClosure)), cycle))
+    }
+
     @Test fun repeatedClosureDoesNotDuplicateAndChangedMovementsInvalidateReview() {
         val closed = closePeriod(data, "c", mapOf("g" to 25000L), start.plusMonths(1))
         assertEquals(25000L, goalSaved(closed.goals.single()))
