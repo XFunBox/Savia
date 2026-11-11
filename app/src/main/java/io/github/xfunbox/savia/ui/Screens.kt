@@ -67,14 +67,14 @@ internal fun Screens(data: AppData, page: Int, today: LocalDate, busy: Boolean,
             pendingDialogSave = null
         }
     }
-    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(20.dp)) {
+    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(top = 12.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
         failure?.let { Text(it, color = MaterialTheme.colorScheme.error) }
         when (page) {
             0 -> {
                 if (cycle == null) {
                     BrandPanel {
                         Column(Modifier.fillMaxWidth().padding(24.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                            Icon(Icons.Default.Savings, null, Modifier.size(40.dp), tint = MaterialTheme.colorScheme.primary)
+                            SaviaMark(Modifier.size(40.dp))
                             Text("Tu dinero, con un plan", style = MaterialTheme.typography.headlineMedium)
                             Text(if (data.settings.salary == 0L) "Empieza por tu ingreso y tus gastos habituales. Después verás cuánto puedes gastar y reservar."
                                 else "Ya tienes tu plan. Confirma el ingreso recibido para empezar tu primer periodo.")
@@ -95,19 +95,31 @@ internal fun Screens(data: AppData, page: Int, today: LocalDate, busy: Boolean,
                             }
                             Text(formatMoney(summary.available, cycle.currency), style = MaterialTheme.typography.displaySmall, fontWeight = FontWeight.Bold,
                                 color = if (summary.available < 0) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary)
-                            Text("Tras descontar gastos pagados, fijos pendientes y ahorro reservado", style = MaterialTheme.typography.bodySmall)
-                            HorizontalDivider(color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = .18f))
-                            Text(if (remaining > 0) "${formatMoney(summary.available / remaining, cycle.currency)} al día · estimación para $remaining días" else "Este periodo ha terminado",
-                                style = MaterialTheme.typography.bodyMedium)
-                            Text("Siguiente cobro · ${cycle.end.readable()}", style = MaterialTheme.typography.labelLarge)
+                            Text("Con tus fijos pendientes y tu reserva ya descontados.", style = MaterialTheme.typography.bodyMedium)
+                            HorizontalDivider(color = MaterialTheme.colorScheme.onSurface.copy(alpha = .15f))
+                            if (remaining > 0) {
+                                Text("${formatMoney(summary.available / remaining, cycle.currency)} al día", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
+                                Text("Estimación para los $remaining días que quedan", style = MaterialTheme.typography.bodySmall)
+                            } else Text("Este periodo ha terminado", style = MaterialTheme.typography.titleMedium)
+                            Surface(shape = RoundedCornerShape(50), color = MaterialTheme.colorScheme.background.copy(alpha = .45f)) {
+                                Row(Modifier.padding(horizontal = 14.dp, vertical = 10.dp), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(Icons.Default.CalendarMonth, null, Modifier.size(18.dp), tint = MaterialTheme.colorScheme.primary)
+                                    Text("Siguiente cobro · ${cycle.end.readable()}", style = MaterialTheme.typography.labelLarge)
+                                }
+                            }
                         }
                     }
                     BudgetCard(summary.variableSpent, cycle.variableBudget, cycle.currency)
-                    CategoryLimits(cycle, data.movements)
-                    Amount("Ahorro previsto al terminar", summary.forecast, cycle.currency)
-                    Text("Estimación tras tus gastos previstos; aún no es dinero ahorrado.", style = MaterialTheme.typography.bodySmall)
-                    if (cycle.target > summary.forecast) Text("Tu reserva supera el ahorro previsto en ${formatMoney(cycle.target - summary.forecast, cycle.currency)}. Revisa los gastos o ajusta la reserva.", color = MaterialTheme.colorScheme.error)
-                    OutlinedButton(enabled = !busy, onClick = { dialog = "target" }) { Text("Cambiar ahorro reservado") }
+                    GlassPanel {
+                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                            Icon(Icons.Default.AutoGraph, null, tint = MaterialTheme.colorScheme.secondary)
+                            Text("Tu previsión de ahorro", style = MaterialTheme.typography.titleMedium)
+                        }
+                        Amount("Previsto al terminar el periodo", summary.forecast, cycle.currency)
+                        Text("Es una estimación tras los gastos previstos. No confirma dinero ahorrado.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        if (cycle.target > summary.forecast) Text("Tu reserva supera la previsión en ${formatMoney(cycle.target - summary.forecast, cycle.currency)}. Revisa los gastos o ajusta la reserva.", color = MaterialTheme.colorScheme.error)
+                        OutlinedButton(enabled = !busy, onClick = { dialog = "target" }, modifier = Modifier.fillMaxWidth()) { Text("Ajustar mi reserva") }
+                    }
                     Card(onClick = onPlan, shape = RoundedCornerShape(24.dp), modifier = Modifier.fillMaxWidth(),
                         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
                         border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.secondary.copy(alpha = .24f))) {
@@ -121,13 +133,14 @@ internal fun Screens(data: AppData, page: Int, today: LocalDate, busy: Boolean,
                             Icon(Icons.Default.ChevronRight, "Ver objetivos")
                         }
                     }
+                    CategoryLimits(cycle, data.movements)
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                         Title("Gastos fijos")
                         Text("${cycle.bills.count { bill -> data.movements.any { it.cycleId == cycle.id && it.billId == bill.id } }} / ${cycle.bills.size} pagados", style = MaterialTheme.typography.labelMedium)
                     }
                     if (cycle.bills.isEmpty()) Text("No tienes gastos fijos en este periodo.", style = MaterialTheme.typography.bodyMedium)
                     if (today >= cycle.end && cycle.bills.isNotEmpty()) Text("Puedes confirmar un pago pendiente eligiendo su fecha real dentro de este periodo.", style = MaterialTheme.typography.bodySmall)
-                    Column {
+                    if (cycle.bills.isNotEmpty()) GlassPanel {
                         cycle.bills.forEach { bill ->
                             val paid = data.movements.firstOrNull { it.cycleId == cycle.id && it.billId == bill.id }
                             Row(Modifier.fillMaxWidth().toggleable(value = paid != null, enabled = !busy && (paid != null || today >= cycle.start), role = Role.Checkbox,
@@ -152,6 +165,7 @@ internal fun Screens(data: AppData, page: Int, today: LocalDate, busy: Boolean,
             1 -> {
                 if (cycle == null) EmptyMessage(Icons.AutoMirrored.Filled.ReceiptLong, "Tu primer movimiento", "Empieza un periodo desde Inicio para añadir ingresos y gastos.")
                 else {
+                    SectionIntro("Cada movimiento cuenta", "Consulta y registra lo que entra y lo que sale.")
                     CycleLabel(cycle)
                     val movements = remember(data.movements, cycle.id) { data.movements.filter { it.cycleId == cycle.id }.sortedByDescending { it.date } }
                     val filtered = remember(movements, movementQuery, movementFilter) { filterMovements(movements, movementQuery, movementFilter) }
@@ -160,7 +174,7 @@ internal fun Screens(data: AppData, page: Int, today: LocalDate, busy: Boolean,
                         label = { Text("Buscar en este periodo") }, placeholder = { Text("Categoría, nota o importe") },
                         leadingIcon = { Icon(Icons.Default.Search, null) },
                         trailingIcon = { if (movementQuery.isNotEmpty()) IconButton(onClick = { movementQuery = ""; movementPage = 0 }) { Icon(Icons.Default.Close, "Limpiar búsqueda") } },
-                        singleLine = true, modifier = Modifier.fillMaxWidth())
+                        singleLine = true, shape = RoundedCornerShape(24.dp), modifier = Modifier.fillMaxWidth())
                     Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         listOf(MovementFilter.ALL to "Todos", MovementFilter.EXPENSES to "Gastos", MovementFilter.INCOME to "Ingresos").forEach { (type, label) ->
                             FilterChip(selected = movementFilter == type, enabled = !busy,
@@ -255,6 +269,7 @@ internal fun Screens(data: AppData, page: Int, today: LocalDate, busy: Boolean,
     val cycle = cycles.firstOrNull { it.id == selected } ?: cycles.firstOrNull()
     if (cycle == null) { EmptyMessage(Icons.Default.BarChart, "Tu dinero de un vistazo", "Aquí verás cómo va cada periodo cuando empieces el primero."); return }
     val currentPage = historyPage.coerceIn(0, lastPage(cycles.size))
+    SectionIntro("La perspectiva de tu dinero", "Revisa cada periodo y compara cómo vas.")
     Box {
         OutlinedButton(onClick = { expanded = true }, modifier = Modifier.fillMaxWidth()) {
             Icon(Icons.Default.CalendarMonth, null); Spacer(Modifier.width(8.dp))
@@ -385,16 +400,15 @@ internal fun Screens(data: AppData, page: Int, today: LocalDate, busy: Boolean,
         modifier = Modifier.fillMaxWidth()
             .clip(shape)
             .background(Brush.linearGradient(listOf(
-                Color(0xFF202C12), Color(0xFF191923), Color(0xFF251B36)
+                Color(0xB34B6016), Color(0xD91C2920), Color(0xC92B233F)
             )))
-            .border(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = .28f), shape),
+            .border(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = .35f), shape),
         content = content
     )
 }
 
 @Composable private fun BudgetCard(spent: Long, budget: Long, currency: String) {
-    Card(shape = RoundedCornerShape(24.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow)) {
-        Column(Modifier.fillMaxWidth().padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+    GlassPanel {
             Text("Gastos del día a día", style = MaterialTheme.typography.titleMedium)
             Text("${formatMoney(spent, currency)} de ${formatMoney(budget, currency)}", style = MaterialTheme.typography.bodyLarge)
             LinearProgressIndicator(progress = { if (budget == 0L) { if (spent > 0L) 1f else 0f } else (spent.toFloat() / budget).coerceIn(0f, 1f) },
@@ -402,7 +416,6 @@ internal fun Screens(data: AppData, page: Int, today: LocalDate, busy: Boolean,
                 color = if (spent > budget) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary)
             Text(if (spent > budget) "Has superado el presupuesto en ${formatMoney(spent - budget, currency)}" else "Quedan ${formatMoney(budget - spent, currency)} para gastos del día a día",
                 style = MaterialTheme.typography.bodySmall, color = if (spent > budget) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant)
-        }
     }
 }
 
@@ -442,10 +455,14 @@ private fun categoryIcon(category: String): ImageVector = when (category.lowerca
     else -> Icons.AutoMirrored.Filled.ReceiptLong
 }
 @Composable private fun EmptyMessage(icon: ImageVector, title: String, text: String) {
-    Column(Modifier.fillMaxWidth().padding(vertical = 32.dp), verticalArrangement = Arrangement.spacedBy(14.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-        Icon(icon, null, Modifier.size(56.dp), tint = MaterialTheme.colorScheme.secondary)
-        Text(title, style = MaterialTheme.typography.headlineSmall)
-        Text(text, style = MaterialTheme.typography.bodyLarge)
+    GlassPanel {
+        Column(Modifier.fillMaxWidth().padding(vertical = 24.dp), verticalArrangement = Arrangement.spacedBy(14.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+            Surface(shape = RoundedCornerShape(24.dp), color = MaterialTheme.colorScheme.secondary.copy(alpha = .12f)) {
+                Icon(icon, null, Modifier.padding(18.dp).size(36.dp), tint = MaterialTheme.colorScheme.secondary)
+            }
+            Text(title, style = MaterialTheme.typography.headlineSmall, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+            Text(text, style = MaterialTheme.typography.bodyMedium, textAlign = androidx.compose.ui.text.style.TextAlign.Center, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
     }
 }
 @Composable internal fun MoneyLine(label: String, amount: Long, currency: String, icon: ImageVector? = null) {
@@ -465,7 +482,12 @@ private fun lastPage(count: Int) = ((count - 1) / PAGE_SIZE).coerceAtLeast(0)
     }
 }
 @Composable internal fun Title(text: String) { Text(text, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold) }
-@Composable private fun CycleLabel(cycle: Cycle) { Text("${cycle.start.readable()} – ${cycle.end.minusDays(1).readable()} · ${cycle.start.year}", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant) }
+@Composable private fun CycleLabel(cycle: Cycle) {
+    Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+        Icon(Icons.Default.DateRange, null, Modifier.size(16.dp), tint = MaterialTheme.colorScheme.secondary)
+        Text("${cycle.start.readable()} – ${cycle.end.minusDays(1).readable()} · ${cycle.start.year}", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    }
+}
 @Composable internal fun Amount(label: String, amount: Long, currency: String) {
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Text(label, style = MaterialTheme.typography.bodyMedium)

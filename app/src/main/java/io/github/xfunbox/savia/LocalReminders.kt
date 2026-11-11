@@ -160,7 +160,7 @@ object LocalReminders {
         val openApp = PendingIntent.getActivity(context, id, intent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
         val notification = Notification.Builder(context, CHANNEL)
-            .setSmallIcon(R.drawable.ic_savia).setContentTitle(title).setContentText(text)
+            .setSmallIcon(R.drawable.ic_savia_monochrome).setContentTitle(title).setContentText(text)
             .setStyle(Notification.BigTextStyle().bigText(text)).setContentIntent(openApp)
             .setAutoCancel(true).setOnlyAlertOnce(true).setVisibility(Notification.VISIBILITY_PRIVATE).build()
         try {

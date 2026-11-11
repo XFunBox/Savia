@@ -53,7 +53,7 @@ internal val LocalFormSaveError = compositionLocalOf<String?> { null }
             content()
             FormError(error ?: LocalFormSaveError.current)
         } },
-        confirmButton = { TextButton(enabled = !busy, onClick = { if (!busy) try { error = null; submit() } catch (e: Exception) { error = e.message ?: "Revisa los datos." } }) { Text(if (busy) "Guardando…" else "Guardar") } },
+        confirmButton = { Button(enabled = !busy, onClick = { if (!busy) try { error = null; submit() } catch (e: Exception) { error = e.message ?: "Revisa los datos." } }) { Text(if (busy) "Guardando…" else "Guardar") } },
         dismissButton = { TextButton(enabled = !busy, onClick = { if (!busy) dismiss() }) { Text("Cancelar") } })
 }
 
@@ -64,6 +64,7 @@ internal val LocalFormSaveError = compositionLocalOf<String?> { null }
 @Composable internal fun Field(label: String, value: String, update: (String) -> Unit, numeric: Boolean = false) {
     val busy = LocalFormBusy.current
     OutlinedTextField(value = value, enabled = !busy, onValueChange = { if (!busy) update(it) }, label = { Text(label) }, singleLine = true,
+        shape = MaterialTheme.shapes.small,
         keyboardOptions = KeyboardOptions(keyboardType = if (numeric) KeyboardType.Decimal else KeyboardType.Text), modifier = Modifier.fillMaxWidth())
 }
 
@@ -265,7 +266,11 @@ internal val LocalFormSaveError = compositionLocalOf<String?> { null }
 
 @Composable private fun Accordion(title: String, summary: String, expanded: Boolean, toggle: () -> Unit, content: @Composable ColumnScope.() -> Unit) {
     val busy = LocalFormBusy.current
-    OutlinedCard(Modifier.fillMaxWidth()) {
+    OutlinedCard(
+        modifier = Modifier.fillMaxWidth(), shape = MaterialTheme.shapes.large,
+        colors = CardDefaults.outlinedCardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
+        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = .10f))
+    ) {
         Row(Modifier.fillMaxWidth().heightIn(min = 64.dp).clickable(enabled = !busy, onClick = { if (!busy) toggle() }, role = Role.Button).semantics { stateDescription = if (expanded) "Desplegado" else "Plegado" }.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
                 Text(title, style = MaterialTheme.typography.titleMedium)
@@ -296,17 +301,21 @@ internal val LocalFormSaveError = compositionLocalOf<String?> { null }
     var editingBill by remember { mutableStateOf<FixedExpense?>(null) }
     var removeBill by remember { mutableStateOf<FixedExpense?>(null) }
     var error by remember { mutableStateOf<String?>(null) }
+    SectionIntro("Un plan que va contigo", "Prepara tus próximos periodos y cuida tus datos.")
     if (guideStep >= 0) {
+        GlassPanel {
         Title("Guía del presupuesto · ${guideStep + 1} de 5")
         Text("Disponible: lo que puedes gastar tras pagos y reserva. Reservado: lo que planeas apartar. Ahorrado: lo que confirmas en Objetivos.")
         Text("Ejemplo ilustrativo: ingreso 1500, fijos 600 y diarios 500 dejan 400 para reservar. Este ejemplo no se guarda como datos tuyos.", style = MaterialTheme.typography.bodySmall)
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        LinearProgressIndicator(progress = { (guideStep + 1) / 5f }, modifier = Modifier.fillMaxWidth().semantics { contentDescription = "Paso ${guideStep + 1} de 5" })
+        Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             OutlinedButton(enabled = !busy && guideStep > 0, onClick = { guideStep--; section = guideSections[guideStep] }) { Text("Atrás") }
             if (guideStep < 4) Button(enabled = !busy, onClick = { guideStep++; section = guideSections[guideStep] }) { Text("Continuar") }
             TextButton(enabled = !busy, onClick = { guideStep = -1; section = null }) { Text("Omitir guía") }
         }
         if (guideStep == 4) Text("Revisa el reparto de abajo antes de guardar. Cambiará solo el presupuesto de próximos periodos; los actuales conservan sus cifras.")
-    } else OutlinedButton(enabled = !busy, onClick = { guideStep = 0; section = "income" }) { Text("Abrir guía paso a paso") }
+        }
+    } else OutlinedButton(enabled = !busy, onClick = { guideStep = 0; section = "income" }, modifier = Modifier.fillMaxWidth()) { Text("Abrir guía paso a paso") }
     Text("Organiza tu próximo periodo: ingresos, gastos y ahorro. Los periodos anteriores conservan sus importes.", color = MaterialTheme.colorScheme.onSurfaceVariant)
     Accordion("1. Ingresos y cobro", "Ingreso habitual, día de cobro y moneda", section == "income", { if (!busy) section = if (section == "income") null else "income" }) {
         Field("Ingreso neto habitual ($currency)", salary, { if (!busy) salary = it }, true)
@@ -363,6 +372,13 @@ internal val LocalFormSaveError = compositionLocalOf<String?> { null }
         OutlinedButton(enabled = !busy, onClick = { if (!busy) onExport() }, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) { Text("Guardar una copia") }
         OutlinedButton(enabled = !busy, onClick = { if (!busy) onImport() }, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) { Text("Recuperar una copia") }
         ReminderSettings { }
+    }
+    Accordion("Sobre Savia y privacidad", "Sin cuentas, anuncios ni seguimiento", section == "privacy", { section = if (section == "privacy") null else "privacy" }) {
+        Text("Savia organiza tu presupuesto y tus objetivos de ahorro en este dispositivo. No conecta con tu banco ni hace transferencias.")
+        Text("Tus ingresos, gastos, objetivos y preferencias se guardan en el almacenamiento privado de la app. Savia no los envía a servidores, no utiliza analítica ni publicidad y no requiere conexión a Internet.")
+        Text("Los avisos son locales y opcionales. Puedes desactivarlos en Copias de seguridad o en los ajustes de Android.")
+        Text("Al exportar eliges dónde guardar el archivo mediante el selector de Android. La copia JSON no está cifrada: quien tenga acceso al archivo podrá leerlo. Si eliges un proveedor en la nube, se aplican sus condiciones.")
+        Text("Puedes corregir o borrar movimientos, objetivos y periodos desde la app. Para borrar todos los datos locales, usa Borrar almacenamiento o desinstala Savia desde Android. Las copias exportadas se eliminan por separado desde donde las guardaste.")
     }
     FormError(error ?: LocalFormSaveError.current)
     Button(enabled = !busy && (guideStep < 0 || guideStep == 4), onClick = {

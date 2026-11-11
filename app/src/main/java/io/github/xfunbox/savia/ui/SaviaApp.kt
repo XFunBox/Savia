@@ -4,8 +4,6 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.BackHandler
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
@@ -18,7 +16,6 @@ import androidx.compose.material.icons.filled.Flag
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.PieChart
 import androidx.compose.material.icons.filled.Remove
-import androidx.compose.material.icons.filled.Savings
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.SouthWest
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -26,6 +23,8 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.text.font.FontWeight
 import androidx.lifecycle.Lifecycle
@@ -152,31 +151,16 @@ fun SaviaApp(reminderDestination: String? = null, reminderRequestId: Int = 0) {
         }
     }
     LaunchedEffect(Unit) { load() }
-    MaterialTheme(colorScheme = darkColorScheme(
-        primary = Color(0xFFC6FF00), onPrimary = Color(0xFF182000),
-        primaryContainer = Color(0xFF26330D), onPrimaryContainer = Color(0xFFE8FF9A),
-        secondary = Color(0xFFB69AFF), onSecondary = Color(0xFF251344),
-        secondaryContainer = Color(0xFF302448), onSecondaryContainer = Color(0xFFEDE3FF),
-        tertiary = Color(0xFF7EE7B1), onTertiary = Color(0xFF073923),
-        error = Color(0xFFFF7891), onError = Color(0xFF4A0015),
-        background = Color(0xFF0B0C12), onBackground = Color(0xFFF3F0FA),
-        surface = Color(0xFF13141C), onSurface = Color(0xFFF3F0FA),
-        surfaceVariant = Color(0xFF211F2B), onSurfaceVariant = Color(0xFFC2BDCE),
-        surfaceContainerLowest = Color(0xFF0E0F15), surfaceContainerLow = Color(0xFF171821),
-        surfaceContainer = Color(0xFF1D1D27), surfaceContainerHigh = Color(0xFF262432),
-        surfaceContainerHighest = Color(0xFF302D3B), outline = Color(0xFF514B60),
-        outlineVariant = Color(0xFF353241), inverseSurface = Color(0xFFEAE5F2),
-        inverseOnSurface = Color(0xFF292631), inversePrimary = Color(0xFF526B00)
-    ), shapes = Shapes(small = RoundedCornerShape(12.dp), medium = RoundedCornerShape(20.dp), large = RoundedCornerShape(28.dp))) {
+    SaviaTheme {
         Scaffold(
             modifier = Modifier.fillMaxSize().drawBehind {
-                drawRect(Brush.verticalGradient(listOf(Color(0xFF10111A), Color(0xFF0B0C12), Color(0xFF100D18))))
+                drawRect(Brush.verticalGradient(listOf(Color(0xFF10151A), Color(0xFF090B10), Color(0xFF161020))))
                 drawCircle(
-                    Brush.radialGradient(listOf(Color(0x337F5CFF), Color.Transparent), center = Offset(size.width, 0f), radius = size.width * .8f),
+                    Brush.radialGradient(listOf(Color(0x527F5CFF), Color.Transparent), center = Offset(size.width, 0f), radius = size.width * .8f),
                     radius = size.width * .8f, center = Offset(size.width, 0f)
                 )
                 drawCircle(
-                    Brush.radialGradient(listOf(Color(0x1FC6FF00), Color.Transparent), center = Offset(0f, size.height * .58f), radius = size.width * .7f),
+                    Brush.radialGradient(listOf(Color(0x28C6FF00), Color.Transparent), center = Offset(0f, size.height * .58f), radius = size.width * .7f),
                     radius = size.width * .7f, center = Offset(0f, size.height * .58f)
                 )
             },
@@ -186,9 +170,14 @@ fun SaviaApp(reminderDestination: String? = null, reminderRequestId: Int = 0) {
             topBar = { TopAppBar(
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent),
                 title = {
-                    Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                        Icon(Icons.Default.Savings, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
-                        Text(when(page) { 1 -> "Movimientos"; 2 -> "Objetivos"; 3 -> "Resumen"; 4 -> "Mi presupuesto"; else -> "Savia" }, fontWeight = FontWeight.Bold)
+                    Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                        Surface(shape = RoundedCornerShape(16.dp), color = MaterialTheme.colorScheme.primary.copy(alpha = .12f)) {
+                            SaviaMark(Modifier.padding(10.dp).size(24.dp))
+                        }
+                        Column {
+                            Text(when(page) { 1 -> "Movimientos"; 2 -> "Objetivos"; 3 -> "Resumen"; 4 -> "Mi presupuesto"; else -> "Savia" }, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                            if (page == 0) Text("Tu dinero, a tu ritmo", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
                     }
                 },
                 navigationIcon = { if (page == 4) IconButton(onClick = { page = 0 }) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Volver al inicio") } },
@@ -198,9 +187,11 @@ fun SaviaApp(reminderDestination: String? = null, reminderRequestId: Int = 0) {
                 val latest = data?.cycles?.maxByOrNull { it.start }
                 if (latest != null && !busy && (page == 0 || page == 1)) Box {
                     ExtendedFloatingActionButton(
+                        modifier = Modifier.semantics { contentDescription = "Añadir movimiento" },
                         containerColor = MaterialTheme.colorScheme.primary,
                         contentColor = MaterialTheme.colorScheme.onPrimary,
-                        elevation = FloatingActionButtonDefaults.elevation(defaultElevation = 8.dp, focusedElevation = 10.dp, pressedElevation = 4.dp),
+                        shape = RoundedCornerShape(50),
+                        elevation = FloatingActionButtonDefaults.elevation(defaultElevation = 4.dp, focusedElevation = 6.dp, pressedElevation = 2.dp),
                         onClick = { if (!busy) addMenuExpanded = true },
                         icon = { Icon(Icons.Default.Add, null) }, text = { Text("Añadir movimiento") })
                     DropdownMenu(expanded = addMenuExpanded, onDismissRequest = { addMenuExpanded = false }) {
@@ -221,25 +212,36 @@ fun SaviaApp(reminderDestination: String? = null, reminderRequestId: Int = 0) {
                     }
                 }
             }, bottomBar = {
-            if (data != null && page != 4) NavigationBar(
-                containerColor = MaterialTheme.colorScheme.surfaceContainerLowest.copy(alpha = .94f),
-                tonalElevation = 0.dp
+            if (data != null && page != 4) Box(
+                Modifier.fillMaxWidth().navigationBarsPadding().padding(horizontal = 12.dp, vertical = 8.dp),
+                contentAlignment = androidx.compose.ui.Alignment.Center
             ) {
-                listOf(0 to "Inicio", 1 to "Movimientos", 2 to "Objetivos", 3 to "Resumen").forEach { (index, title) ->
-                    NavigationBarItem(selected = page == index, onClick = { page = index },
-                        icon = { Icon(when(index) { 1 -> Icons.AutoMirrored.Filled.ReceiptLong; 2 -> Icons.Default.Flag; 3 -> Icons.Default.PieChart; else -> Icons.Default.Home }, null) },
-                        label = { Text(title) },
-                        colors = NavigationBarItemDefaults.colors(
-                            selectedIconColor = MaterialTheme.colorScheme.primary,
-                            selectedTextColor = MaterialTheme.colorScheme.secondary,
-                            indicatorColor = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = .75f),
-                            unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                            unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant
-                        ))
+                Surface(
+                    modifier = Modifier.widthIn(max = 600.dp).fillMaxWidth(),
+                    shape = RoundedCornerShape(32.dp),
+                    color = MaterialTheme.colorScheme.surfaceContainer.copy(alpha = .86f),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = .12f))
+                ) {
+                    NavigationBar(containerColor = Color.Transparent, tonalElevation = 0.dp, windowInsets = WindowInsets(0, 0, 0, 0)) {
+                        listOf(0 to "Inicio", 1 to "Actividad", 2 to "Objetivos", 3 to "Resumen").forEach { (index, title) ->
+                            NavigationBarItem(selected = page == index, onClick = { page = index },
+                                icon = { Icon(when(index) { 1 -> Icons.AutoMirrored.Filled.ReceiptLong; 2 -> Icons.Default.Flag; 3 -> Icons.Default.PieChart; else -> Icons.Default.Home }, null) },
+                                label = { Text(title, style = MaterialTheme.typography.labelSmall) },
+                                colors = NavigationBarItemDefaults.colors(
+                                    selectedIconColor = MaterialTheme.colorScheme.onPrimary,
+                                    selectedTextColor = MaterialTheme.colorScheme.onSurface,
+                                    indicatorColor = MaterialTheme.colorScheme.primary,
+                                    unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant
+                                ))
+                        }
+                    }
                 }
             }
+
         }) { padding ->
-            Column(Modifier.fillMaxSize().padding(padding).padding(horizontal = 16.dp)) {
+            Box(Modifier.fillMaxSize().padding(padding), contentAlignment = androidx.compose.ui.Alignment.TopCenter) {
+            Column(Modifier.widthIn(max = 640.dp).fillMaxSize().padding(horizontal = 20.dp)) {
                 if (busy || loading) LinearProgressIndicator(Modifier.fillMaxWidth())
                 error?.let { message ->
                     Text(message, color = MaterialTheme.colorScheme.error, modifier = Modifier.padding(vertical = 8.dp))
@@ -263,6 +265,7 @@ fun SaviaApp(reminderDestination: String? = null, reminderRequestId: Int = 0) {
                         }
                     }
                 }
+            }
             }
         }
         if (pendingImport != null) AlertDialog(
