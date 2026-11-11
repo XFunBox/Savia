@@ -12,4 +12,4 @@
 
 Se conservan el identificador Android, la firma definitiva y el formato de datos/copias v5. No se añaden cuentas, conexión bancaria, anuncios, analítica ni permisos de Internet. Las estimaciones no confirman ahorro ni realizan transferencias.
 
-Versión 3.0.0 (código 8), preparada como APK y AAB firmados. La publicación se realizará en una fase posterior. La ficha, la política pública de privacidad, el contacto del desarrollador y la validación de la distribución quedan descritos en [Preparación de Google Play](google-play.md).
+Versión 3.0.0 (código 8), distribuida como APK mediante GitHub Releases y preparada como AAB firmado. La publicación en Google Play se realizará en una fase posterior. La ficha, la política pública de privacidad, el contacto del desarrollador y la validación de la distribución quedan descritos en [Preparación de Google Play](google-play.md).

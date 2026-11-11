@@ -8,11 +8,11 @@ La versión 3.0.0 incorpora superficies translúcidas, una identidad propia y un
 
 ## Descargar e instalar
 
-Savia 3.0.0 está preparada para pruebas finales. Su publicación se realizará en una fase posterior.
+**[Descargar Savia 3.0.0 desde Releases](https://github.com/XFunBox/Savia/releases/tag/v3.0.0)**
 
-**[Última versión publicada: Savia 2.3.0](https://github.com/XFunBox/Savia/releases/tag/v2.3.0)**
+[Descarga directa de Savia 3.0.0](https://github.com/XFunBox/Savia/releases/download/v3.0.0/Savia-3.0.0.apk)
 
-1. Para probar 3.0, utiliza el archivo firmado `Savia-3.0.0.apk` entregado con esta versión. Las versiones públicas están en Releases.
+1. Descarga `Savia-3.0.0.apk` desde Releases o desde el enlace directo.
 2. Abre la APK y, si Android lo solicita, permite instalar aplicaciones desde ese navegador o gestor de archivos.
 3. Abre **Savia**, configura Mi presupuesto y crea el primer periodo desde Inicio.
 
