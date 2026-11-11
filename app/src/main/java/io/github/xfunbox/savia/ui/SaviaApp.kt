@@ -181,6 +181,7 @@ fun SaviaApp(reminderDestination: String? = null, reminderRequestId: Int = 0) {
                 )
             },
             containerColor = Color.Transparent,
+            contentColor = MaterialTheme.colorScheme.onBackground,
             snackbarHost = { SnackbarHost(snackbar) },
             topBar = { TopAppBar(
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent),
