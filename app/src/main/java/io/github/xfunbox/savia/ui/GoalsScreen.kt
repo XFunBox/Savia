@@ -38,8 +38,7 @@ internal fun GoalsScreen(data: AppData, cycle: Cycle?, busy: Boolean, save: (App
         pending = next
         save(next)
     }
-    Text("Un presupuesto, varios objetivos", style = MaterialTheme.typography.titleLarge)
-    Text("Reparte el ahorro que reservas cada periodo. El progreso refleja lo que tú indiques que ya has ahorrado.", style = MaterialTheme.typography.bodyMedium)
+    SectionIntro("Haz sitio a lo que quieres", "Reparte tu reserva entre objetivos. El progreso muestra solo el ahorro que has registrado.")
     if (cycle != null) {
         val summary = summarize(cycle, data.movements, data.goals)
         Card(shape = RoundedCornerShape(24.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
@@ -62,14 +61,24 @@ internal fun GoalsScreen(data: AppData, cycle: Cycle?, busy: Boolean, save: (App
     Button(enabled = !busy && data.goals.size < 100, onClick = { creating = true }, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) {
         Icon(Icons.Default.Add, null); Spacer(Modifier.width(8.dp)); Text("Crear objetivo")
     }
-    if (data.goals.isEmpty()) Text("Todavía no tienes objetivos. Crea uno, por ejemplo Vacaciones o Fondo de emergencia.")
+    if (data.goals.isEmpty()) GlassPanel {
+        Icon(Icons.Default.Flag, null, tint = MaterialTheme.colorScheme.secondary, modifier = Modifier.size(32.dp))
+        Text("Tu próxima meta empieza aquí", style = MaterialTheme.typography.titleLarge)
+        Text("Un viaje, un colchón para imprevistos… Crea tu primer objetivo y elige tu ritmo.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+    }
     data.goals.forEach { goal ->
         val total = goalSaved(goal)
         key(goal.id) {
             Card(shape = RoundedCornerShape(24.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow)) {
                 Column(Modifier.fillMaxWidth().padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Text(goal.name, style = MaterialTheme.typography.titleLarge)
-                    Text("${formatMoney(total, goal.currency)} de ${formatMoney(goal.targetAmount, goal.currency)}", style = MaterialTheme.typography.titleMedium)
+                    Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                        Surface(shape = RoundedCornerShape(16.dp), color = MaterialTheme.colorScheme.secondary.copy(alpha = .14f)) {
+                            Icon(Icons.Default.Flag, null, Modifier.padding(12.dp), tint = MaterialTheme.colorScheme.secondary)
+                        }
+                        Text(goal.name, style = MaterialTheme.typography.titleLarge, modifier = Modifier.weight(1f))
+                    }
+                    Text(formatMoney(total, goal.currency), style = MaterialTheme.typography.headlineMedium, color = MaterialTheme.colorScheme.secondary)
+                    Text("Ahorrado de ${formatMoney(goal.targetAmount, goal.currency)}", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     LinearProgressIndicator(progress = { (total.toFloat() / goal.targetAmount).coerceIn(0f, 1f) },
                         modifier = Modifier.fillMaxWidth().height(8.dp).semantics {
                             contentDescription = "${goal.name}: ahorrados ${formatMoney(total, goal.currency)} de ${formatMoney(goal.targetAmount, goal.currency)}"

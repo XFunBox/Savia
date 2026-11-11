@@ -42,3 +42,11 @@ Resumen permite borrar un periodo y exclusivamente sus movimientos, previa confi
 ## Desarrollo: historial, calendario y revisión
 
 Las siete mejoras posteriores a 2.1.0 se describen en [desarrollo-siete-mejoras.md](desarrollo-siete-mejoras.md). El almacenamiento conserva lectura de copias v1–v5; v5 vincula aportaciones a ingresos extraordinarios sin alterar copias previas. Los saldos anteriores permanecen como saldo inicial, separado de entradas con fecha; no se inventa un historial. Solo ahorro adicional neto reduce el disponible además de la reserva. Vencimientos y límites conservan instantáneas por periodo; el resumen compara periodos de la misma moneda y desglosa ingresos por origen, y los límites avisan al alcanzar el 80 %. Cierres son revisiones explícitas con aportaciones idempotentes; no generan ingresos del siguiente periodo. Preferencias y metadatos de avisos permanecen en el dispositivo, fuera de la copia financiera.
+
+## Savia 3.0: superficies y jerarquía
+
+La interfaz usa una paleta central en `ui/SaviaTheme.kt`. El fondo oscuro con halos suaves queda visible a través de las tarjetas y de la cápsula de navegación. Los formularios y menús mantienen superficies opacas para lectura y entrada de datos. Se conserva el verde para acciones y disponible y el morado para objetivos y previsión; los avisos llevan texto además de color.
+
+Inicio prioriza disponible, estimación diaria y siguiente cobro, con la reserva ya descontada. Previsión y reserva se explican por separado. El contenido se limita a 640 dp y se centra en pantallas anchas. Se mantiene la navegación y la lógica financiera existentes. La inspiración de Garraio se adapta a Savia mediante superficies translúcidas y jerarquía; no se incorporan sus marcas ni recursos.
+
+La marca 3.0 usa una S con brote, dibujada como vector propio. El símbolo conserva los dos colores; Android recibe versiones adaptable y monocroma, y las notificaciones una versión sin margen de lanzador.

@@ -2,21 +2,25 @@
 
 Aplicación Android para organizar gastos y ahorrar, sin cuenta y con los datos en el teléfono.
 
+## Savia 3.0
+
+La versión 3.0.0 incorpora superficies translúcidas, una identidad propia y una presentación más clara del presupuesto. Todavía no está publicada en Google Play. [Cambios de 3.0](docs/cambios-3.0.0.md), [preparación de Google Play](docs/google-play.md) y [privacidad](docs/privacidad.md).
+
 ## Descargar e instalar
 
-**[Descargar Savia 2.3.0 desde Releases](https://github.com/XFunBox/Savia/releases/tag/v2.3.0)**
+**[Descargar Savia 3.0.0 desde Releases](https://github.com/XFunBox/Savia/releases/tag/v3.0.0)**
 
-[Descarga directa de Savia 2.3.0](https://github.com/XFunBox/Savia/releases/download/v2.3.0/Savia-2.3.0.apk)
+[Descarga directa de Savia 3.0.0](https://github.com/XFunBox/Savia/releases/download/v3.0.0/Savia-3.0.0.apk)
 
-1. Descarga `Savia-2.3.0.apk` desde Releases o desde el enlace directo.
+1. Descarga `Savia-3.0.0.apk` desde Releases o desde el enlace directo.
 2. Abre la APK y, si Android lo solicita, permite instalar aplicaciones desde ese navegador o gestor de archivos.
 3. Abre **Savia**, configura Mi presupuesto y crea el primer periodo desde Inicio.
 
-Requiere **Android 12 o posterior**. La versión 2.3.0 añade ingresos vinculados a objetivos, filtros de movimientos y comparación entre periodos. Pruebas, compilación, lint y firma se comprueban en la publicación.
+Requiere **Android 12 o posterior**. La versión 3.0.0 renueva la interfaz y el logo, manteniendo los cálculos y las copias v5. Pruebas, compilación, lint y firma se comprueban en la publicación.
 
-### Actualización desde Savia 2.1.0 o 2.2.0
+### Actualización desde Savia 2.1.0, 2.2.0 o 2.3.0
 
-Exporta una copia JSON y guárdala fuera de la app. Instala la APK 2.3.0 sobre la anterior: conserva el identificador y la firma definitiva. No hace falta desinstalar. Las copias nuevas incluyen el historial y las revisiones; no pueden importarse en versiones antiguas.
+Exporta una copia JSON y guárdala fuera de la app. Instala la APK 3.0.0 sobre la anterior: conserva el identificador y la firma definitiva. No hace falta desinstalar. Las copias nuevas incluyen el historial y las revisiones; no pueden importarse en versiones antiguas.
 
 ### Actualización desde Savia 2.0.0 de pruebas
 
@@ -32,7 +36,14 @@ Savia tiene un identificador Android nuevo, así que se instala como una aplicac
 
 Las copias JSON no están cifradas. No desinstales Ahorro hasta comprobar la importación en Savia.
 
-## Novedades de 2.3.0
+## Novedades de 3.0.0
+
+- Tarjetas translúcidas sobre halos verdes y morados, y navegación en cápsula.
+- Disponible y ritmo diario más claros, con reserva y previsión diferenciadas.
+- Símbolo S con brote, icono adaptable y arranque oscuro.
+- Privacidad dentro de la app y preparación de Android App Bundle para Google Play.
+
+## Funciones incorporadas en 2.3.0
 
 - Ingresos extra asignables a objetivos y acceso al ingreso original desde su aportación.
 - Filtros Todos, Gastos e Ingresos combinados con la búsqueda.
